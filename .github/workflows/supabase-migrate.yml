@@ -1,0 +1,59 @@
+name: ALTUS-CORE — Supabase Migrations (Auto-Apply)
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/policies/**"
+      - ".github/workflows/supabase-migrate.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: supabase-migrate-main
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Authenticate Supabase CLI
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          supabase --version
+          supabase login --token "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Link project
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Apply migrations (db push)
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase db push --password "$SUPABASE_DB_PASSWORD"
+          echo "✅ Supabase migrations applied."
+
+      - name: Post-check (tables list)
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase db query --password "$SUPABASE_DB_PASSWORD" \
+            "select tablename from pg_tables where schemaname='public' order by tablename;"
