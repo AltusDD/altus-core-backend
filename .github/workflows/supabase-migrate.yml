@@ -24,36 +24,21 @@ jobs:
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
-        with:
-          version: latest
 
-      - name: Authenticate Supabase CLI
+      - name: Login to Supabase
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          set -euo pipefail
-          supabase --version
           supabase login --token "$SUPABASE_ACCESS_TOKEN"
 
       - name: Link project
-        env:
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          set -euo pipefail
-          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          supabase link --project-ref srzwamukysmhiaaviwiv
 
-      - name: Apply migrations (db push)
+      - name: Apply migrations using pooler connection
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          supabase db push --password "$SUPABASE_DB_PASSWORD"
-          echo "✅ Supabase migrations applied."
-
-      - name: Post-check (tables list)
-        env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          set -euo pipefail
-          supabase db query --password "$SUPABASE_DB_PASSWORD" \
-            "select tablename from pg_tables where schemaname='public' order by tablename;"
+          supabase db push \
+            --db-url "postgres://postgres.srzwamukysmhiaaviwiv:${SUPABASE_DB_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
