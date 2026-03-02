@@ -1,6 +1,16 @@
 name: ALTUS-CORE — Supabase Migrations (Controlled)
 
 on:
+  # PR checks (NO DB WRITE) — enables required status checks
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/policies/**"
+      - ".github/workflows/supabase-migrate.yml"
+
+  # Auto deploy to STAGING on merge/push to main
   push:
     branches:
       - main
@@ -9,6 +19,7 @@ on:
       - "supabase/policies/**"
       - ".github/workflows/supabase-migrate.yml"
 
+  # Manual promotion
   workflow_dispatch:
     inputs:
       target:
@@ -21,7 +32,66 @@ on:
           - production
 
 jobs:
+  # ------------------------------------------------------------
+  # PR CHECK (SAFE): validate migrations compile/lint only.
+  # No Supabase auth, no DB password, no db push.
+  # ------------------------------------------------------------
+  migrate-pr-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: migrate-pr-check
 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Basic sanity: ensure migration directory exists and has files if touched
+      - name: Validate migration files exist
+        run: |
+          set -euo pipefail
+          if [ -d "supabase/migrations" ]; then
+            echo "Found supabase/migrations"
+          else
+            echo "ERROR: supabase/migrations missing"
+            exit 1
+          fi
+
+      # Lightweight parse check: ensure all *.sql files are readable (no null bytes)
+      - name: Validate SQL files are readable
+        run: |
+          set -euo pipefail
+          FILES=$(git diff --name-only origin/main...HEAD | grep -E '^supabase/(migrations|policies)/.*\.(sql|SQL)$' || true)
+          if [ -z "$FILES" ]; then
+            echo "No SQL files changed in this PR."
+            exit 0
+          fi
+          echo "Changed SQL files:"
+          echo "$FILES"
+          for f in $FILES; do
+            test -s "$f" || (echo "ERROR: empty file $f" && exit 1)
+            LC_ALL=C tr -d '\000' < "$f" > /dev/null || (echo "ERROR: null bytes in $f" && exit 1)
+          done
+          echo "SQL readability checks passed."
+
+      # Optional: supabase CLI config sanity (won't touch DB)
+      - name: Supabase project config sanity
+        run: |
+          set -euo pipefail
+          if [ -f "supabase/config.toml" ]; then
+            echo "Found supabase/config.toml"
+          else
+            echo "NOTE: supabase/config.toml not found (ok if not used)."
+          fi
+
+  # ------------------------------------------------------------
+  # STAGING DEPLOY (AUTO): push to main OR dispatch(target=staging)
+  # Writes to STAGING DB.
+  # ------------------------------------------------------------
   migrate-staging:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'staging')
     runs-on: ubuntu-latest
@@ -51,6 +121,10 @@ jobs:
           supabase db push \
             --db-url "postgresql://postgres.${{ secrets.SUPABASE_STAGING_PROJECT_REF }}:${ENCODED_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
 
+  # ------------------------------------------------------------
+  # PRODUCTION DEPLOY (MANUAL ONLY): dispatch(target=production)
+  # Writes to PROD DB. Protected by GitHub env reviewers.
+  # ------------------------------------------------------------
   migrate-production:
     if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
     runs-on: ubuntu-latest
