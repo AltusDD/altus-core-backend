@@ -3,8 +3,7 @@ name: ALTUS-CORE — Supabase Migrations (Controlled)
 on:
   # PR checks (NO DB WRITE) — enables required status checks
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "supabase/migrations/**"
       - "supabase/policies/**"
@@ -12,8 +11,7 @@ on:
 
   # Auto deploy to STAGING on merge/push to main
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "supabase/migrations/**"
       - "supabase/policies/**"
@@ -30,6 +28,13 @@ on:
         options:
           - staging
           - production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migrate-${{ github.ref }}-${{ github.event_name }}-${{ inputs.target || 'staging' }}
+  cancel-in-progress: false
 
 jobs:
   # ------------------------------------------------------------
@@ -50,7 +55,6 @@ jobs:
         with:
           version: latest
 
-      # Basic sanity: ensure migration directory exists and has files if touched
       - name: Validate migration files exist
         run: |
           set -euo pipefail
@@ -61,7 +65,6 @@ jobs:
             exit 1
           fi
 
-      # Lightweight parse check: ensure all *.sql files are readable (no null bytes)
       - name: Validate SQL files are readable
         run: |
           set -euo pipefail
@@ -70,15 +73,17 @@ jobs:
             echo "No SQL files changed in this PR."
             exit 0
           fi
+
           echo "Changed SQL files:"
           echo "$FILES"
+
           for f in $FILES; do
             test -s "$f" || (echo "ERROR: empty file $f" && exit 1)
             LC_ALL=C tr -d '\000' < "$f" > /dev/null || (echo "ERROR: null bytes in $f" && exit 1)
           done
+
           echo "SQL readability checks passed."
 
-      # Optional: supabase CLI config sanity (won't touch DB)
       - name: Supabase project config sanity
         run: |
           set -euo pipefail
@@ -96,6 +101,7 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'staging')
     runs-on: ubuntu-latest
     environment: staging
+    name: migrate-staging
 
     steps:
       - name: Checkout
@@ -118,7 +124,8 @@ jobs:
         run: |
           set -euo pipefail
           ENCODED_PASSWORD="$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['DB_PASSWORD']))")"
-          supabase db push \
+
+          supabase db push --include-all \
             --db-url "postgresql://postgres.${{ secrets.SUPABASE_STAGING_PROJECT_REF }}:${ENCODED_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
 
   # ------------------------------------------------------------
@@ -129,6 +136,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
     runs-on: ubuntu-latest
     environment: production
+    name: migrate-production
 
     steps:
       - name: Checkout
@@ -151,5 +159,6 @@ jobs:
         run: |
           set -euo pipefail
           ENCODED_PASSWORD="$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['DB_PASSWORD']))")"
-          supabase db push \
+
+          supabase db push --include-all \
             --db-url "postgresql://postgres.${{ secrets.SUPABASE_PROD_PROJECT_REF }}:${ENCODED_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
