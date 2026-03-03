@@ -199,26 +199,61 @@ drop policy if exists adr_select on public.asset_data_raw;
 create policy adr_select
 on public.asset_data_raw
 for select
-using (public.altus_is_org_member(organization_id));
+using (
+  exists (
+    select 1
+    from public.assets a
+    where a.id = asset_data_raw.asset_id
+      and public.altus_is_org_member(a.organization_id)
+  )
+);
 
 drop policy if exists adr_insert on public.asset_data_raw;
 create policy adr_insert
 on public.asset_data_raw
 for insert
-with check (public.altus_is_org_member(organization_id));
+with check (
+  exists (
+    select 1
+    from public.assets a
+    where a.id = asset_data_raw.asset_id
+      and public.altus_is_org_member(a.organization_id)
+  )
+);
 
 drop policy if exists adr_update on public.asset_data_raw;
 create policy adr_update
 on public.asset_data_raw
 for update
-using (public.altus_is_org_member(organization_id))
-with check (public.altus_is_org_member(organization_id));
+using (
+  exists (
+    select 1
+    from public.assets a
+    where a.id = asset_data_raw.asset_id
+      and public.altus_is_org_member(a.organization_id)
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.assets a
+    where a.id = asset_data_raw.asset_id
+      and public.altus_is_org_member(a.organization_id)
+  )
+);
 
 drop policy if exists adr_delete on public.asset_data_raw;
 create policy adr_delete
 on public.asset_data_raw
 for delete
-using (public.altus_is_org_member(organization_id));
+using (
+  exists (
+    select 1
+    from public.assets a
+    where a.id = asset_data_raw.asset_id
+      and public.altus_is_org_member(a.organization_id)
+  )
+);
 
 -- asset_specs_reconciled: org members can read/update within org
 drop policy if exists asr_select on public.asset_specs_reconciled;

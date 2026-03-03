@@ -116,16 +116,19 @@ jobs:
         run: supabase login --token "${{ secrets.SUPABASE_ACCESS_TOKEN }}"
 
       - name: Link STAGING project
+        env:
+          SUPABASE_NON_INTERACTIVE: "true"
         run: supabase link --project-ref "${{ secrets.SUPABASE_STAGING_PROJECT_REF }}"
 
       - name: Apply migrations to STAGING
         env:
           DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+          SUPABASE_NON_INTERACTIVE: "true"
         run: |
           set -euo pipefail
           ENCODED_PASSWORD="$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['DB_PASSWORD']))")"
 
-          supabase db push --include-all \
+          supabase db push --include-all --yes \
             --db-url "postgresql://postgres.${{ secrets.SUPABASE_STAGING_PROJECT_REF }}:${ENCODED_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
 
   # ------------------------------------------------------------
