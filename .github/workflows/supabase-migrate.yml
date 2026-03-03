@@ -137,7 +137,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
         run: |
           ENCODED_PASSWORD="$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['DB_PASSWORD']))")"
-          supabase db exec --db-url "postgresql://postgres.${{ secrets.SUPABASE_STAGING_PROJECT_REF }}:${ENCODED_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres" "select * from supabase_migrations.schema_migrations;"
+          psql "postgresql://postgres.${{ secrets.SUPABASE_STAGING_PROJECT_REF }}:${ENCODED_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres" -c "select * from supabase_migrations.schema_migrations;"
 
   # ------------------------------------------------------------
   # PRODUCTION DEPLOY (MANUAL ONLY): dispatch(target=production)
