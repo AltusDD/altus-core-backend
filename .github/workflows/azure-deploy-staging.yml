@@ -1,0 +1,40 @@
+name: Azure Deploy Staging - Asset Ingest
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Zip function package
+        run: |
+          cd azure/functions/asset_ingest
+          zip -r ../../../asset_ingest.zip .
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: 8fa1cef5-94d5-45e7-9e5b-bc112ad9e823
+          tenant-id: 41f56839-6a08-4c0b-bf66-4f8ceac8816b
+          subscription-id: 3d1966c1-5273-4091-aab4-07c125e7b96d
+
+      - name: Deploy to staging Function App
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az functionapp deployment source config-zip \
+              --resource-group altus-core-staging-rg \
+              --name altus-core-staging-func \
+              --src asset_ingest.zip
