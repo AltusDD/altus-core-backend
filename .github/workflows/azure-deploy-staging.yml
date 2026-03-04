@@ -51,4 +51,5 @@ jobs:
             az functionapp deployment source config-zip \
               --resource-group altus-core-staging-rg \
               --name altus-core-staging-func \
-              --src asset_ingest.zip
+              --src asset_ingest.zip \
+              --build-remote true
