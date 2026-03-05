@@ -221,9 +221,7 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
                 payload={
                     "asset_id": asset_id,
                     "source": source,
-                    "payload": raw_payload,
-                    "payload_sha256": payload_hash,
-                    "source_record_id": None,
+                    "payload_jsonb": raw_payload,
                 },
                 config=config,
             )
