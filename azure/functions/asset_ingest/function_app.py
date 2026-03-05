@@ -17,12 +17,14 @@ _ALLOWED_SOURCES = {"CORELOGIC", "MLS", "DOORLOOP", "MANUAL", "OTHER"}
 
 class RuntimeConfig:
     def __init__(self) -> None:
+        self.config_mode = "UNKNOWN"
         env_supabase_url = os.getenv("SUPABASE_URL")
         env_supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
         if env_supabase_url and env_supabase_service_role_key:
             self.supabase_url = env_supabase_url.rstrip("/")
             self.supabase_service_role_key = env_supabase_service_role_key
+            self.config_mode = "ENV"
             return
 
         vault_url = os.getenv("KEY_VAULT_URL", "https://altus-core-staging-kv.vault.azure.net/")
@@ -38,14 +40,20 @@ class RuntimeConfig:
             self.supabase_service_role_key = env_supabase_service_role_key
         else:
             self.supabase_service_role_key = secret_client.get_secret("SUPABASE-SERVICE-ROLE-KEY").value
+        
+        self.config_mode = "KV"
 
 
 _config: RuntimeConfig | None = None
 
 
 def _build_headers() -> dict[str, str]:
-    build_id = os.getenv("BUILD_ID") or os.getenv("WEBSITE_RUN_FROM_PACKAGE") or "unknown"
-    return {"x-build-id": build_id}
+    build_sha = os.getenv("ALTUS_BUILD_SHA", "unknown")
+    cfg_mode = _config.config_mode if _config else "UNKNOWN"
+    return {
+        "x-altus-build-sha": build_sha,
+        "x-altus-config-mode": cfg_mode
+    }
 
 
 def _get_config() -> RuntimeConfig:
