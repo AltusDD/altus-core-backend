@@ -219,7 +219,6 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
             raw_row = _insert_supabase_row(
                 table="asset_data_raw",
                 payload={
-                    "organization_id": organization_id,
                     "asset_id": asset_id,
                     "source": source,
                     "payload": raw_payload,
