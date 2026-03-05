@@ -43,6 +43,11 @@ class RuntimeConfig:
 _config: RuntimeConfig | None = None
 
 
+def _build_headers() -> dict[str, str]:
+    build_id = os.getenv("BUILD_ID") or os.getenv("WEBSITE_RUN_FROM_PACKAGE") or "unknown"
+    return {"x-build-id": build_id}
+
+
 def _get_config() -> RuntimeConfig:
     global _config
     if _config is None:
@@ -80,6 +85,7 @@ def _bad_request(message: str) -> func.HttpResponse:
     return func.HttpResponse(
         json.dumps({"ok": False, "error": message}),
         status_code=400,
+        headers=_build_headers(),
         mimetype="application/json",
     )
 
@@ -166,6 +172,7 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
                 }
             ),
             status_code=200,
+            headers=_build_headers(),
             mimetype="application/json",
         )
     except ValueError as exc:
@@ -176,5 +183,6 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(
             json.dumps({"ok": False, "error": "Internal server error"}),
             status_code=500,
+            headers=_build_headers(),
             mimetype="application/json",
         )
