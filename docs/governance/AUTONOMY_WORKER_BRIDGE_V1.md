@@ -200,7 +200,7 @@ summary: AUTONOMY-02A corrected worker bridge contract drift.
 changed_files: .github/workflows/worker_bridge.yml, .github/workflows/task_status_reconcile.yml, docs/governance/AUTONOMY_WORKER_BRIDGE_V1.md
 commit_sha: abcdef1234567890
 pr_url: https://github.com/Altus-Realty-Group/altus-core-backend/pull/456
-proof_artifacts: docs/proofpacks/2026-03-06_be-core-autonomy-02/AUTONOMY02A_CORRECTION_RAW.txt
+proof_artifacts: docs/proofpacks/2026-03-06_be-core_autonomy-02/AUTONOMY02A_CORRECTION_RAW.txt
 blocker_reason:
 next_required_action: BE-Core review and close if accepted.
 
