@@ -200,6 +200,22 @@ def _stage_error(code: str) -> func.HttpResponse:
     )
 
 
+def _asset_search_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_SEARCH_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 @app.route(route="assets", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def assets_list(req: func.HttpRequest) -> func.HttpResponse:
     try:
@@ -261,6 +277,68 @@ def assets_list(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset list failed")
         return _internal_error()
+
+
+@app.route(route="assets/search", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def assets_search(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return error_response
+
+        limit_raw = req.params.get("limit", "25")
+        offset_raw = req.params.get("offset", "0")
+
+        try:
+            limit = int(limit_raw)
+            offset = int(offset_raw)
+        except ValueError:
+            return _bad_request("limit and offset must be integers")
+
+        if limit < 1 or limit > 200:
+            return _bad_request("limit must be between 1 and 200")
+        if offset < 0:
+            return _bad_request("offset must be >= 0")
+
+        q_value = (req.params.get("q") or "").strip()
+        apn_value = (req.params.get("apn") or "").strip()
+        clip_value = (req.params.get("clip") or "").strip()
+
+        params: dict[str, str] = {
+            "select": "id,organization_id,asset_type,status,display_name,address_canonical,apn,clip,created_at,updated_at",
+            "organization_id": f"eq.{organization_id}",
+            "order": "created_at.desc",
+            "limit": str(limit),
+            "offset": str(offset),
+        }
+
+        if apn_value:
+            params["apn"] = f"eq.{apn_value}"
+        elif clip_value:
+            params["clip"] = f"eq.{clip_value}"
+        elif q_value:
+            safe_query = q_value.replace("*", "").replace(",", "")
+            params["or"] = f"(display_name.ilike.*{safe_query}*,address_canonical.ilike.*{safe_query}*)"
+
+        config = _get_config()
+        items = _supabase_get_rows("assets", params, config)
+
+        return func.HttpResponse(
+            json.dumps(
+                {
+                    "ok": True,
+                    "items": items,
+                    "limit": limit,
+                    "offset": offset,
+                }
+            ),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="application/json",
+        )
+    except Exception:
+        logging.exception("Asset search failed")
+        return _asset_search_internal_error()
 
 
 @app.route(route="assets/{asset_id}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
