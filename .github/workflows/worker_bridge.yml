@@ -203,6 +203,7 @@ jobs:
 
             const dryRun = (String(process.env.INPUT_DRY_RUN || 'false').toLowerCase() === 'true');
             const outcome = (process.env.INPUT_OUTCOME || 'success').trim().toLowerCase();
+            const dateStamp = new Date().toISOString().slice(0, 10);
 
             if (!['success', 'blocked', 'failed', 'proof-ready'].includes(outcome)) {
               core.setFailed('outcome must be success|blocked|failed|proof-ready');
@@ -260,13 +261,13 @@ jobs:
                 execution_agent: executionAgent,
                 repo: `${context.repo.owner}/${context.repo.repo}`,
                 branch: process.env.GITHUB_REF_NAME || '',
-                expected_proofpack: `docs/proofpacks/<YYYY-MM-DD>_be-core_issue-${issueNumber}`,
+                expected_proofpack: `docs/proofpacks/${dateStamp}_be-core_issue-${issueNumber}`,
                 execution_mode: executionMode,
                 current_labels: labelsAfterStatus,
                 requested_by: issue.data.user?.login || '',
                 commit_branch: process.env.GITHUB_REF_NAME || '',
                 expected_result_mode: 'result',
-                proofpack_expectation: 'docs/proofpacks/<YYYY-MM-DD>_be-core_autonomy-02',
+                proofpack_expectation: `docs/proofpacks/${dateStamp}_be-core_issue-${issueNumber}`,
                 dry_run: dryRun,
                 honesty_note: honestyNote
               };

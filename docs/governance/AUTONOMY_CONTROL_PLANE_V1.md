@@ -63,6 +63,10 @@ CD receives final validated result
 - Dion relay is fallback transport only.
 - Manual relay is not the default backend path.
 - Proof remains mandatory for completion.
+- Direct backend proof path is deterministic and repo-relative:
+   - `docs/proofpacks/<YYYY-MM-DD>_be-core_issue-<issue_number>`
+- Default route exercised for hardened backend proof emission:
+   - `GET /api/assets/metrics`
 
 ## Labels
 
@@ -106,6 +110,7 @@ The proof collector uploads, when present:
 - raw curl output
 - raw SQL output
 - diff scope files
+- deterministic `docs/proofpacks/**` backend worker outputs
 
 Proof collector is additive. It does not change deploy behavior.
 

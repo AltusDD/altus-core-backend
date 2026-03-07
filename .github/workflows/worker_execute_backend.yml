@@ -59,6 +59,21 @@ on:
         required: false
         default: ""
         type: string
+      proof_route:
+        description: Route to exercise for proof capture
+        required: false
+        default: /api/assets/metrics
+        type: string
+      proof_base_url:
+        description: Base URL for route proof call
+        required: false
+        default: https://altus-core-staging-func.azurewebsites.net
+        type: string
+      proof_org_id:
+        description: Org header value for route proof call
+        required: false
+        default: d290f1ee-6c54-4b01-90e6-d701748f0851
+        type: string
       execution_mode:
         description: direct or relay-fallback
         required: false
@@ -79,6 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Claim queued backend task and emit execution packet
+        id: emit_packet
         uses: actions/github-script@v7
         env:
           INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
@@ -92,6 +108,7 @@ jobs:
           INPUT_PRIORITY: ${{ inputs.priority }}
           INPUT_EXECUTION_AGENT: ${{ inputs.execution_agent }}
           INPUT_EXPECTED_PROOFPACK: ${{ inputs.expected_proofpack }}
+          INPUT_PROOF_ROUTE: ${{ inputs.proof_route }}
           INPUT_EXECUTION_MODE: ${{ inputs.execution_mode }}
         with:
           script: |
@@ -202,7 +219,9 @@ jobs:
             const executionAgent = (process.env.INPUT_EXECUTION_AGENT || '').trim() || section(issue.body || '', 'execution_agent') || agentLabels[0].replace('agent:', '');
             const repository = (process.env.INPUT_REPOSITORY || '').trim() || `${context.repo.owner}/${context.repo.repo}`;
             const branch = (process.env.INPUT_BRANCH || '').trim() || process.env.GITHUB_REF_NAME || '';
-            const expectedProofpack = (process.env.INPUT_EXPECTED_PROOFPACK || '').trim() || `docs/proofpacks/<YYYY-MM-DD>_be-core_issue-${issueNumber}`;
+            const dateStamp = new Date().toISOString().slice(0, 10);
+            const expectedProofpack = (process.env.INPUT_EXPECTED_PROOFPACK || '').trim() || `docs/proofpacks/${dateStamp}_be-core_issue-${issueNumber}`;
+            const proofRoute = (process.env.INPUT_PROOF_ROUTE || '/api/assets/metrics').trim() || '/api/assets/metrics';
 
             if (!dryRun) {
               const missing = [];
@@ -231,6 +250,7 @@ jobs:
               branch,
               repo: repository,
               expected_proofpack: expectedProofpack,
+              route_tested: proofRoute,
               execution_mode: executionMode,
               dry_run: dryRun,
               claimed_from_status: 'status:queued',
@@ -260,6 +280,7 @@ jobs:
               `branch: ${packet.branch}`,
               `repo: ${packet.repo}`,
               `expected_proofpack: ${packet.expected_proofpack}`,
+              `route_tested: ${packet.route_tested}`,
               `execution_mode: ${packet.execution_mode}`,
               `dry_run: ${packet.dry_run}`,
               `status_transition: ${packet.claimed_from_status} -> ${packet.moved_to_status}`
@@ -278,6 +299,64 @@ jobs:
             core.setOutput('packet_json', packetJson);
             core.setOutput('packet_txt', packetTxt);
 
+      - name: Emit deterministic backend proof folder
+        shell: bash
+        env:
+          INPUT_PROOF_BASE_URL: ${{ inputs.proof_base_url }}
+          INPUT_PROOF_ORG_ID: ${{ inputs.proof_org_id }}
+        run: |
+          set -euo pipefail
+
+          issue_number="$(python -c "import json; p=json.load(open('worker_execution_packet.json', encoding='utf-8')); print(p.get('issue_number',''))")"
+          dry_run="$(python -c "import json; p=json.load(open('worker_execution_packet.json', encoding='utf-8')); print(str(p.get('dry_run', True)).lower())")"
+          expected_proofpack="$(python -c "import json, datetime; p=json.load(open('worker_execution_packet.json', encoding='utf-8')); v=(p.get('expected_proofpack') or '').strip(); print(v or f\"docs/proofpacks/{datetime.datetime.utcnow().strftime('%Y-%m-%d')}_be-core_issue-{p.get('issue_number','unknown')}\")")"
+          route_tested="$(python -c "import json; p=json.load(open('worker_execution_packet.json', encoding='utf-8')); print((p.get('route_tested') or '/api/assets/metrics').strip())")"
+
+          proof_dir="${expected_proofpack}"
+          mkdir -p "${proof_dir}"
+
+          commit_sha="${GITHUB_SHA}"
+          base_url="${INPUT_PROOF_BASE_URL:-https://altus-core-staging-func.azurewebsites.net}"
+          org_id="${INPUT_PROOF_ORG_ID:-d290f1ee-6c54-4b01-90e6-d701748f0851}"
+
+          python -c "import datetime, json, os; manifest={'issue_number':'${issue_number}','proof_folder':'${proof_dir}','route_tested':'${route_tested}','commit_sha':'${commit_sha}','base_url':'${base_url}','org_id':'${org_id}','dry_run':('${dry_run}'=='true'),'generated_at_utc':datetime.datetime.utcnow().isoformat()+'Z'}; json.dump(manifest, open(os.path.join('${proof_dir}','proof_manifest.json'),'w',encoding='utf-8'), indent=2)"
+
+          if [ "${dry_run}" = "true" ]; then
+            {
+              echo "DRY_RUN_TRUE"
+              echo "route_tested=${route_tested}"
+              echo "commit_sha=${commit_sha}"
+              echo "proof_capture_status=skipped_live_http_call"
+            } > "${proof_dir}/route_raw_response.txt"
+          else
+            curl -k -sS -i -X GET "${base_url}${route_tested}" \
+              -H "x-altus-org-id: ${org_id}" > "${proof_dir}/route_raw_response.txt" || true
+          fi
+
+          {
+            echo "route_tested=${route_tested}"
+            echo "commit_sha=${commit_sha}"
+            echo "proof_folder=${proof_dir}"
+          } > "${proof_dir}/route_and_commit.txt"
+
+          {
+            echo "telemetry_evidence_mode=repo-native"
+            echo "note=telemetry capture in worker_execute_backend is environment-dependent"
+            echo "dry_run=${dry_run}"
+          } > "${proof_dir}/telemetry_evidence.txt"
+
+          {
+            echo "persistence_evidence=optional"
+            echo "note=worker_execute_backend emits placeholder when live data-plane credentials are unavailable"
+            echo "dry_run=${dry_run}"
+          } > "${proof_dir}/persistence_evidence.txt"
+
+          cp "${proof_dir}/proof_manifest.json" worker_metrics_proof_manifest.json
+          cp "${proof_dir}/route_raw_response.txt" worker_metrics_route_raw_response.txt
+          cp "${proof_dir}/telemetry_evidence.txt" worker_metrics_telemetry_evidence.txt
+          cp "${proof_dir}/persistence_evidence.txt" worker_metrics_persistence_evidence.txt
+          cp "${proof_dir}/route_and_commit.txt" worker_metrics_route_and_commit.txt
+
       - name: Upload backend execution packet
         uses: actions/upload-artifact@v4
         with:
@@ -287,4 +366,10 @@ jobs:
             backend_execution_packet_issue_*.txt
             worker_execution_packet.json
             worker_execution_packet.txt
+            docs/proofpacks/**
+            worker_metrics_proof_manifest.json
+            worker_metrics_route_raw_response.txt
+            worker_metrics_telemetry_evidence.txt
+            worker_metrics_persistence_evidence.txt
+            worker_metrics_route_and_commit.txt
           if-no-files-found: error

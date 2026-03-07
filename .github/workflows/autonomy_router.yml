@@ -311,6 +311,7 @@ jobs:
 
             if (normalizedLane === 'lane:be-core') {
               try {
+                const today = new Date().toISOString().slice(0, 10);
                 await github.rest.actions.createWorkflowDispatch({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -327,7 +328,8 @@ jobs:
                     environment: packet.environment || '',
                     priority: packet.priority || '',
                     execution_agent: packet.execution_agent || '',
-                    expected_proofpack: `docs/proofpacks/<YYYY-MM-DD>_be-core_issue-${issueNumber}`,
+                    expected_proofpack: `docs/proofpacks/${today}_be-core_issue-${issueNumber}`,
+                    proof_route: '/api/assets/metrics',
                     execution_mode: 'direct'
                   }
                 });

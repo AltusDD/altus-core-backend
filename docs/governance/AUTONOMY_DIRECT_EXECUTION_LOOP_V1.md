@@ -167,6 +167,22 @@ Finalization must preserve exactly one `status:*` label.
 - worker result packet
 - final handoff packet
 
+## Deterministic Proof Folder Contract
+
+- Repo-relative proof folder is required: `docs/proofpacks/<YYYY-MM-DD>_be-core_issue-<issue_number>`.
+- `worker_execute_backend.yml` must emit, at minimum:
+	- `proof_manifest.json`
+	- `route_and_commit.txt`
+	- `route_raw_response.txt`
+	- `telemetry_evidence.txt`
+	- `persistence_evidence.txt`
+- Route proof target defaults to: `GET /api/assets/metrics`.
+
+## Dry-Run Honesty Rule
+
+- If `dry_run=true`, proof folder artifacts are still required.
+- Dry-run artifacts must explicitly state that live route/persistence/telemetry collection was skipped.
+
 ## Backend Milestone Compatibility
 
 This loop is additive infrastructure and supports backend milestones such as:

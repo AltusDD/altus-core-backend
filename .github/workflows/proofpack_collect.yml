@@ -83,6 +83,10 @@ jobs:
             done
           done
 
+          for file in docs/proofpacks/**/* worker_metrics_*.json worker_metrics_*.txt; do
+            [ -f "$file" ] && files+=("$file")
+          done
+
           extra="${{ inputs.artifact_glob }}"
           if [ -n "$extra" ]; then
             for file in $extra; do

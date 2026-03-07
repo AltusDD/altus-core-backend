@@ -118,6 +118,8 @@ branch
 
 expected_proofpack
 
+route_tested (backend direct loop default: `/api/assets/metrics`)
+
 execution_mode
 
 Worker Result Contract
@@ -186,6 +188,10 @@ worker packet comment is created
 
 workflow stops without pretending execution occurred
 
+Dry-run still must emit deterministic repo-relative proof artifacts under:
+
+`docs/proofpacks/<YYYY-MM-DD>_be-core_issue-<issue_number>`
+
 Live Worker Mode
 
 If a real worker is attached, result inputs can be returned through workflow_dispatch:
@@ -225,6 +231,14 @@ AUTONOMY-03 adds deterministic backend markers:
 `<!-- autonomy-backend-result-packet -->`
 
 `<!-- autonomy-backend-final-handoff -->`
+
+AUTONOMY-03 also requires deterministic backend proof files:
+
+- `proof_manifest.json`
+- `route_and_commit.txt`
+- `route_raw_response.txt`
+- `telemetry_evidence.txt`
+- `persistence_evidence.txt`
 
 Example Lifecycle Packet Set
 Example Input Issue Body

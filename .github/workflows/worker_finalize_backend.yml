@@ -41,6 +41,11 @@ on:
         required: false
         default: ""
         type: string
+      proof_folder:
+        description: Deterministic repo-relative proof folder path
+        required: false
+        default: ""
+        type: string
       blocker_reason:
         description: Blocker reason
         required: false
@@ -78,6 +83,7 @@ jobs:
           INPUT_COMMIT_SHA: ${{ inputs.commit_sha }}
           INPUT_PR_URL: ${{ inputs.pr_url }}
           INPUT_PROOF_ARTIFACTS: ${{ inputs.proof_artifacts }}
+          INPUT_PROOF_FOLDER: ${{ inputs.proof_folder }}
           INPUT_BLOCKER_REASON: ${{ inputs.blocker_reason }}
           INPUT_NEXT_REQUIRED_ACTION: ${{ inputs.next_required_action }}
           INPUT_EXECUTION_MODE: ${{ inputs.execution_mode }}
@@ -185,6 +191,7 @@ jobs:
               commit_sha: (process.env.INPUT_COMMIT_SHA || '').trim(),
               pr_url: (process.env.INPUT_PR_URL || '').trim(),
               proof_artifacts: normalizeList(process.env.INPUT_PROOF_ARTIFACTS || ''),
+              proof_folder: (process.env.INPUT_PROOF_FOLDER || '').trim(),
               blocker_reason: (process.env.INPUT_BLOCKER_REASON || '').trim(),
               next_required_action: (process.env.INPUT_NEXT_REQUIRED_ACTION || '').trim(),
               execution_mode: (process.env.INPUT_EXECUTION_MODE || 'direct').trim() || 'direct'
@@ -199,6 +206,7 @@ jobs:
               pr_url: result.pr_url,
               changed_files: result.changed_files,
               proof_artifacts: result.proof_artifacts,
+              proof_folder: result.proof_folder,
               blocker_reason: result.blocker_reason,
               next_required_action: result.next_required_action,
               execution_mode: result.execution_mode
@@ -229,6 +237,7 @@ jobs:
               `commit_sha: ${result.commit_sha}`,
               `pr_url: ${result.pr_url}`,
               `proof_artifacts: ${result.proof_artifacts.join(', ')}`,
+              `proof_folder: ${result.proof_folder}`,
               `blocker_reason: ${result.blocker_reason}`,
               `next_required_action: ${result.next_required_action}`,
               `execution_mode: ${result.execution_mode}`
@@ -245,6 +254,7 @@ jobs:
               `commit_sha: ${handoff.commit_sha}`,
               `pr_url: ${handoff.pr_url}`,
               `proof_artifacts: ${handoff.proof_artifacts.join(', ')}`,
+              `proof_folder: ${handoff.proof_folder}`,
               `blocker_reason: ${handoff.blocker_reason}`,
               `next_required_action: ${handoff.next_required_action}`,
               `execution_mode: ${handoff.execution_mode}`
