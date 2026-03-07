@@ -233,6 +233,22 @@ def _asset_search_internal_error() -> func.HttpResponse:
     )
 
 
+def _asset_match_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_MATCH_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 @app.route(route="assets", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def assets_list(req: func.HttpRequest) -> func.HttpResponse:
     try:
@@ -433,6 +449,91 @@ def asset_detail(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset detail failed")
         return _internal_error()
+
+
+@app.route(route="assets/match", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def assets_match(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return error_response
+
+        try:
+            body = req.get_json()
+        except ValueError:
+            return _bad_request("Invalid payload")
+
+        if not isinstance(body, dict):
+            return _bad_request("Invalid payload")
+
+        asset = body.get("asset")
+        if not isinstance(asset, dict):
+            return _bad_request("Invalid payload")
+
+        field_names = ["apn", "clip", "address_canonical", "display_name"]
+        normalized_fields: dict[str, str] = {}
+        for field_name in field_names:
+            field_value = asset.get(field_name)
+            if field_value is None:
+                normalized_fields[field_name] = ""
+                continue
+
+            if not isinstance(field_value, str):
+                return _bad_request("Invalid payload")
+
+            normalized_fields[field_name] = field_value.strip()
+
+        if not any(normalized_fields.values()):
+            return _bad_request("Invalid payload")
+
+        config = _get_config()
+        projection = "id,organization_id,asset_type,status,display_name,address_canonical,apn,clip,created_at,updated_at"
+
+        for strategy in field_names:
+            strategy_value = normalized_fields[strategy]
+            if not strategy_value:
+                continue
+
+            candidates = _supabase_get_rows(
+                "assets",
+                {
+                    "select": projection,
+                    "organization_id": f"eq.{organization_id}",
+                    strategy: f"eq.{strategy_value}",
+                    "order": "created_at.desc",
+                },
+                config,
+            )
+
+            if candidates:
+                return func.HttpResponse(
+                    json.dumps(
+                        {
+                            "ok": True,
+                            "match_strategy": strategy,
+                            "candidates": candidates,
+                        }
+                    ),
+                    status_code=200,
+                    headers=_build_headers(),
+                    mimetype="application/json",
+                )
+
+        return func.HttpResponse(
+            json.dumps(
+                {
+                    "ok": True,
+                    "match_strategy": "none",
+                    "candidates": [],
+                }
+            ),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="application/json",
+        )
+    except Exception:
+        logging.exception("Asset match failed")
+        return _asset_match_internal_error()
 
 
 @app.route(route="assets/ingest", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
