@@ -3,8 +3,10 @@ import json
 import logging
 import os
 import uuid
+from io import StringIO
 from datetime import datetime, timezone
 from typing import Any
+import csv
 
 import azure.functions as func
 import requests
@@ -357,6 +359,22 @@ def _asset_raw_internal_error() -> func.HttpResponse:
     )
 
 
+def _asset_export_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_EXPORT_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 def _extract_link_payload(req: func.HttpRequest) -> tuple[dict[str, str] | None, func.HttpResponse | None]:
     try:
         body = req.get_json()
@@ -557,6 +575,15 @@ def _snapshot_bad_request() -> func.HttpResponse:
 
 
 def _raw_bad_request() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps({"ok": False, "error": "Invalid request"}),
+        status_code=400,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
+def _export_bad_request() -> func.HttpResponse:
     return func.HttpResponse(
         json.dumps({"ok": False, "error": "Invalid request"}),
         status_code=400,
@@ -959,6 +986,98 @@ def assets_search(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset search failed")
         return _asset_search_internal_error()
+
+
+@app.route(route="assets/export", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def assets_export(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return error_response
+
+        format_value = (req.params.get("format") or "json").strip().lower()
+        if format_value not in {"json", "csv"}:
+            return _export_bad_request()
+
+        limit_raw = req.params.get("limit", "1000")
+        offset_raw = req.params.get("offset", "0")
+        try:
+            limit = int(limit_raw)
+            offset = int(offset_raw)
+        except ValueError:
+            return _export_bad_request()
+
+        if limit < 1 or offset < 0:
+            return _export_bad_request()
+
+        projection = "id,organization_id,asset_type,status,display_name,address_canonical,apn,clip,created_at,updated_at"
+        params: dict[str, str] = {
+            "select": projection,
+            "organization_id": f"eq.{organization_id}",
+            "order": "created_at.desc",
+            "limit": str(limit),
+            "offset": str(offset),
+        }
+
+        status_value = req.params.get("status")
+        if status_value:
+            params["status"] = f"eq.{status_value}"
+
+        asset_type_value = req.params.get("asset_type")
+        if asset_type_value:
+            params["asset_type"] = f"eq.{asset_type_value}"
+
+        query_text = req.params.get("q")
+        if query_text:
+            safe_query = query_text.replace("*", "")
+            params["or"] = f"(display_name.ilike.*{safe_query}*,name.ilike.*{safe_query}*)"
+
+        config = _get_config()
+        items = _supabase_get_rows("assets", params, config)
+
+        if format_value == "json":
+            return func.HttpResponse(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "items": items,
+                        "limit": limit,
+                        "offset": offset,
+                        "format": "json",
+                    }
+                ),
+                status_code=200,
+                headers=_build_headers(),
+                mimetype="application/json",
+            )
+
+        output = StringIO()
+        writer = csv.writer(output)
+        csv_fields = [
+            "id",
+            "organization_id",
+            "asset_type",
+            "status",
+            "display_name",
+            "address_canonical",
+            "apn",
+            "clip",
+            "created_at",
+            "updated_at",
+        ]
+        writer.writerow(csv_fields)
+        for item in items:
+            writer.writerow([item.get(field_name, "") for field_name in csv_fields])
+
+        return func.HttpResponse(
+            output.getvalue(),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="text/csv",
+        )
+    except Exception:
+        logging.exception("Asset export failed")
+        return _asset_export_internal_error()
 
 
 @app.route(route="assets/{asset_id}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
