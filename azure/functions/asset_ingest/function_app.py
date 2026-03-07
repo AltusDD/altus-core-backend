@@ -25,6 +25,7 @@ _ALLOWED_LINK_TYPES = {
     "structure_deal",
 }
 _LINK_SOURCE_PREFIX = "ASSET_LINK::"
+_LINK_DELETE_SOURCE_PREFIX = "ASSET_LINK_DELETE::"
 
 
 class RuntimeConfig:
@@ -276,6 +277,22 @@ def _asset_link_internal_error() -> func.HttpResponse:
     )
 
 
+def _asset_timeline_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_TIMELINE_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 def _extract_link_payload(req: func.HttpRequest) -> tuple[dict[str, str] | None, func.HttpResponse | None]:
     try:
         body = req.get_json()
@@ -429,8 +446,58 @@ def _fallback_delete_link(
     if not fallback_rows:
         return False
 
-    _delete_supabase_row_by_id("asset_data_raw", str(fallback_rows[0].get("id")), config)
+    deleted_row_id = str(fallback_rows[0].get("id"))
+    _delete_supabase_row_by_id("asset_data_raw", deleted_row_id, config)
+
+    try:
+        delete_source_value = f"{_LINK_DELETE_SOURCE_PREFIX}{link_type}"
+        _insert_supabase_row(
+            "asset_data_raw",
+            {
+                "asset_id": parent_asset_id,
+                "source": delete_source_value,
+                "payload_jsonb": {
+                    "record_type": "asset_link_delete",
+                    "organization_id": organization_id,
+                    "parent_asset_id": parent_asset_id,
+                    "child_asset_id": child_asset_id,
+                    "link_type": link_type,
+                    "deleted_link_row_id": deleted_row_id,
+                    "deleted_at": datetime.now(timezone.utc).isoformat(),
+                },
+            },
+            config,
+        )
+    except Exception:
+        logging.exception("Asset link fallback delete tombstone insert failed")
+
     return True
+
+
+def _timeline_bad_request() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps({"ok": False, "error": "Invalid request"}),
+        status_code=400,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
+def _timeline_derive_event_type(row: dict[str, Any], raw_ingest_row_id: str | None) -> str:
+    source_value = str(row.get("source") or "")
+    payload_value = row.get("payload_jsonb")
+    payload_record_type = payload_value.get("record_type") if isinstance(payload_value, dict) else None
+
+    if payload_record_type == "asset_link_delete" or source_value.startswith(_LINK_DELETE_SOURCE_PREFIX):
+        return "asset_link_delete"
+
+    if payload_record_type == "asset_link" or source_value.startswith(_LINK_SOURCE_PREFIX):
+        return "asset_link_create"
+
+    if raw_ingest_row_id and str(row.get("id")) == raw_ingest_row_id:
+        return "raw_ingest"
+
+    return "enrichment_write"
 
 
 @app.route(route="assets", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
@@ -633,6 +700,112 @@ def asset_detail(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset detail failed")
         return _internal_error()
+
+
+@app.route(route="assets/{asset_id}/timeline", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def asset_timeline(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return error_response
+
+        asset_id_raw = req.route_params.get("asset_id")
+        if not asset_id_raw:
+            return _timeline_bad_request()
+
+        try:
+            normalized_asset_id = str(uuid.UUID(asset_id_raw))
+        except ValueError:
+            return _timeline_bad_request()
+
+        limit_raw = req.params.get("limit", "50")
+        offset_raw = req.params.get("offset", "0")
+        try:
+            limit = int(limit_raw)
+            offset = int(offset_raw)
+        except ValueError:
+            return _timeline_bad_request()
+
+        if limit < 1 or limit > 200 or offset < 0:
+            return _timeline_bad_request()
+
+        config = _get_config()
+        assets = _supabase_get_rows(
+            "assets",
+            {
+                "select": "id",
+                "organization_id": f"eq.{organization_id}",
+                "id": f"eq.{normalized_asset_id}",
+                "limit": "1",
+            },
+            config,
+        )
+
+        if not assets:
+            return func.HttpResponse(
+                json.dumps({"ok": False, "code": "ASSET_NOT_FOUND"}),
+                status_code=404,
+                headers=_build_headers(),
+                mimetype="application/json",
+            )
+
+        fetch_size = min(offset + limit + 500, 2000)
+        raw_rows = _supabase_get_rows(
+            "asset_data_raw",
+            {
+                "select": "id,asset_id,source,payload_jsonb,fetched_at",
+                "asset_id": f"eq.{normalized_asset_id}",
+                "order": "fetched_at.desc",
+                "limit": str(fetch_size),
+            },
+            config,
+        )
+
+        non_link_rows: list[dict[str, Any]] = []
+        for row in raw_rows:
+            source_value = str(row.get("source") or "")
+            payload_value = row.get("payload_jsonb")
+            payload_record_type = payload_value.get("record_type") if isinstance(payload_value, dict) else None
+            if payload_record_type in {"asset_link", "asset_link_delete"}:
+                continue
+            if source_value.startswith(_LINK_SOURCE_PREFIX) or source_value.startswith(_LINK_DELETE_SOURCE_PREFIX):
+                continue
+            non_link_rows.append(row)
+
+        raw_ingest_row_id: str | None = None
+        if non_link_rows:
+            oldest_non_link_row = min(non_link_rows, key=lambda row: str(row.get("fetched_at") or ""))
+            raw_ingest_row_id = str(oldest_non_link_row.get("id"))
+
+        all_items: list[dict[str, Any]] = []
+        for row in raw_rows:
+            all_items.append(
+                {
+                    "event_type": _timeline_derive_event_type(row, raw_ingest_row_id),
+                    "source": row.get("source"),
+                    "occurred_at": row.get("fetched_at"),
+                    "payload": row.get("payload_jsonb"),
+                }
+            )
+
+        page_items = all_items[offset: offset + limit]
+
+        return func.HttpResponse(
+            json.dumps(
+                {
+                    "ok": True,
+                    "items": page_items,
+                    "limit": limit,
+                    "offset": offset,
+                }
+            ),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="application/json",
+        )
+    except Exception:
+        logging.exception("Asset timeline failed")
+        return _asset_timeline_internal_error()
 
 
 @app.route(route="assets/match", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
