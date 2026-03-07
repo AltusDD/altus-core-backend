@@ -4,7 +4,7 @@ import logging
 import os
 import uuid
 from io import StringIO
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 import csv
 
@@ -450,7 +450,32 @@ def _asset_overview_internal_error() -> func.HttpResponse:
     )
 
 
+def _asset_metrics_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_METRICS_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 def _overview_bad_request() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps({"ok": False, "error": "Invalid request"}),
+        status_code=400,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
+def _metrics_bad_request() -> func.HttpResponse:
     return func.HttpResponse(
         json.dumps({"ok": False, "error": "Invalid request"}),
         status_code=400,
@@ -1173,6 +1198,57 @@ def _get_overview_recent_audit(
     return sorted_recent_audit_assets[:recent_limit], len(latest_audit_by_asset)
 
 
+def _parse_iso_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+
+    normalized = value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _get_metrics_assets_with_audit_in_window(
+    assets_by_id: dict[str, dict[str, Any]],
+    window_start_utc: datetime,
+    config: RuntimeConfig,
+) -> int:
+    organization_asset_ids = set(assets_by_id.keys())
+    if not organization_asset_ids:
+        return 0
+
+    raw_rows = _supabase_get_rows(
+        "asset_data_raw",
+        {
+            "select": "asset_id,source,payload_jsonb,fetched_at",
+            "order": "fetched_at.desc,id.desc",
+            "limit": "5000",
+        },
+        config,
+    )
+
+    matching_asset_ids: set[str] = set()
+    for row in raw_rows:
+        asset_id = str(row.get("asset_id") or "")
+        if asset_id not in organization_asset_ids:
+            continue
+
+        occurred_at = _parse_iso_datetime(row.get("fetched_at"))
+        if occurred_at is None or occurred_at < window_start_utc:
+            continue
+
+        event_type = _audit_derive_event_type(row, None)
+        if event_type in _OVERVIEW_AUDIT_EVENT_TYPES:
+            matching_asset_ids.add(asset_id)
+
+    return len(matching_asset_ids)
+
+
 def _get_snapshot_links_from_fallback(asset_id: str, config: RuntimeConfig) -> list[dict[str, Any]]:
     raw_rows = _supabase_get_rows(
         "asset_data_raw",
@@ -1538,6 +1614,101 @@ def assets_overview(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset overview failed")
         return _asset_overview_internal_error()
+
+
+@app.route(route="assets/metrics", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def assets_metrics(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return _metrics_bad_request()
+
+        window_days_raw = req.params.get("window_days", "7")
+        try:
+            window_days = int(window_days_raw)
+        except ValueError:
+            return _metrics_bad_request()
+
+        if window_days < 1 or window_days > 90:
+            return _metrics_bad_request()
+
+        config = _get_config()
+        all_assets = _supabase_get_rows(
+            "assets",
+            {
+                "select": "id,status,created_at,updated_at",
+                "organization_id": f"eq.{organization_id}",
+                "order": "id.desc",
+                "limit": "10000",
+            },
+            config,
+        )
+
+        assets_by_id: dict[str, dict[str, Any]] = {
+            str(asset.get("id") or ""): asset
+            for asset in all_assets
+            if str(asset.get("id") or "")
+        }
+        organization_asset_ids = set(assets_by_id.keys())
+
+        now_utc = datetime.now(timezone.utc)
+        window_start_utc = now_utc - timedelta(days=window_days)
+
+        total_assets = len(all_assets)
+        active_assets = 0
+        archived_assets = 0
+        created_in_window = 0
+        updated_in_window = 0
+
+        for asset in all_assets:
+            status_value = str(asset.get("status") or "").upper()
+            if status_value == "ACTIVE":
+                active_assets += 1
+            elif status_value == "ARCHIVED":
+                archived_assets += 1
+
+            created_at = _parse_iso_datetime(asset.get("created_at"))
+            if created_at is not None and created_at >= window_start_utc:
+                created_in_window += 1
+
+            updated_at = _parse_iso_datetime(asset.get("updated_at"))
+            if updated_at is not None and updated_at >= window_start_utc:
+                updated_in_window += 1
+
+        linked_asset_ids = _get_overview_linked_asset_ids(
+            organization_id=organization_id,
+            organization_asset_ids=organization_asset_ids,
+            config=config,
+        )
+        assets_with_audit_in_window = _get_metrics_assets_with_audit_in_window(
+            assets_by_id=assets_by_id,
+            window_start_utc=window_start_utc,
+            config=config,
+        )
+
+        return func.HttpResponse(
+            json.dumps(
+                {
+                    "ok": True,
+                    "metrics": {
+                        "total_assets": total_assets,
+                        "active_assets": active_assets,
+                        "archived_assets": archived_assets,
+                        "created_in_window": created_in_window,
+                        "updated_in_window": updated_in_window,
+                        "assets_with_audit_in_window": assets_with_audit_in_window,
+                        "linked_assets": len(linked_asset_ids),
+                    },
+                    "window_days": window_days,
+                }
+            ),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="application/json",
+        )
+    except Exception:
+        logging.exception("Asset metrics failed")
+        return _asset_metrics_internal_error()
 
 
 @app.route(route="assets/search", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
