@@ -325,6 +325,22 @@ def _asset_bulk_resolve_internal_error() -> func.HttpResponse:
     )
 
 
+def _asset_upsert_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_UPSERT_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 def _extract_link_payload(req: func.HttpRequest) -> tuple[dict[str, str] | None, func.HttpResponse | None]:
     try:
         body = req.get_json()
@@ -623,6 +639,51 @@ def _create_resolved_asset(
         },
         config,
     )
+
+
+def _update_asset_row(
+    organization_id: str,
+    asset_id: str,
+    updates: dict[str, Any],
+    config: RuntimeConfig,
+) -> dict[str, Any]:
+    endpoint = f"{config.supabase_url}/rest/v1/assets?id=eq.{asset_id}&organization_id=eq.{organization_id}"
+    headers = {
+        "apikey": config.supabase_service_role_key,
+        "Authorization": f"Bearer {config.supabase_service_role_key}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
+
+    response = requests.patch(endpoint, headers=headers, json=updates, timeout=30)
+    if response.status_code >= 400:
+        raise RuntimeError(f"Supabase update failed for assets: {response.status_code} {response.text}")
+
+    data = response.json()
+    if not isinstance(data, list) or not data:
+        raise RuntimeError("Supabase update returned no rows for assets")
+
+    return data[0]
+
+
+def _build_upsert_update_fields(asset: dict[str, Any]) -> dict[str, Any]:
+    updates: dict[str, Any] = {}
+    updatable_fields = ["display_name", "address_canonical", "apn", "clip", "asset_type", "status"]
+
+    for field_name in updatable_fields:
+        if field_name not in asset:
+            continue
+
+        field_value = asset.get(field_name)
+        if field_value is None:
+            continue
+
+        if not isinstance(field_value, str):
+            raise ValueError("Invalid payload")
+
+        updates[field_name] = field_value.strip()
+
+    return updates
 
 
 def _build_timeline_items(raw_rows: list[dict[str, Any]], limit: int, offset: int) -> list[dict[str, Any]]:
@@ -1219,6 +1280,91 @@ def assets_bulk_resolve(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset bulk resolve failed")
         return _asset_bulk_resolve_internal_error()
+
+
+@app.route(route="assets/upsert", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def assets_upsert(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return error_response
+
+        try:
+            body = req.get_json()
+        except ValueError:
+            return _bad_request("Invalid payload")
+
+        if not isinstance(body, dict):
+            return _bad_request("Invalid payload")
+
+        asset = body.get("asset")
+        if not isinstance(asset, dict):
+            return _bad_request("Invalid payload")
+
+        normalized_fields = _normalize_matchable_asset_fields(asset)
+        if normalized_fields is None:
+            return _bad_request("Invalid payload")
+
+        if not any(normalized_fields.values()):
+            return _bad_request("Invalid payload")
+
+        config = _get_config()
+        match_strategy, candidates = _match_asset_candidates(
+            organization_id=organization_id,
+            normalized_fields=normalized_fields,
+            config=config,
+        )
+
+        if candidates:
+            updates = _build_upsert_update_fields(asset)
+            matched_asset_id = str(candidates[0].get("id"))
+            if updates:
+                _update_asset_row(
+                    organization_id=organization_id,
+                    asset_id=matched_asset_id,
+                    updates=updates,
+                    config=config,
+                )
+
+            return func.HttpResponse(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "resolution": "updated",
+                        "asset_id": matched_asset_id,
+                        "match_strategy": match_strategy,
+                    }
+                ),
+                status_code=200,
+                headers=_build_headers(),
+                mimetype="application/json",
+            )
+
+        created_asset = _create_resolved_asset(
+            organization_id=organization_id,
+            asset=asset,
+            normalized_fields=normalized_fields,
+            config=config,
+        )
+
+        return func.HttpResponse(
+            json.dumps(
+                {
+                    "ok": True,
+                    "resolution": "created",
+                    "asset_id": created_asset.get("id"),
+                    "match_strategy": "none",
+                }
+            ),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="application/json",
+        )
+    except ValueError:
+        return _bad_request("Invalid payload")
+    except Exception:
+        logging.exception("Asset upsert failed")
+        return _asset_upsert_internal_error()
 
 
 @app.route(route="assets/match", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
