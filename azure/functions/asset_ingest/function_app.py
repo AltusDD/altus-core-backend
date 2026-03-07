@@ -24,6 +24,7 @@ _ALLOWED_LINK_TYPES = {
     "parcel_unit",
     "structure_deal",
 }
+_LINK_SOURCE_PREFIX = "ASSET_LINK::"
 
 
 class RuntimeConfig:
@@ -312,6 +313,124 @@ def _extract_link_payload(req: func.HttpRequest) -> tuple[dict[str, str] | None,
         "child_asset_id": child_asset_id,
         "link_type": link_type,
     }, None
+
+
+def _is_missing_asset_links_table_error(exc: Exception) -> bool:
+    message = str(exc)
+    return "public.asset_links" in message and "PGRST205" in message
+
+
+def _get_fallback_link_rows(
+    organization_id: str,
+    parent_asset_id: str,
+    child_asset_id: str,
+    link_type: str,
+    config: RuntimeConfig,
+) -> list[dict[str, Any]]:
+    source_value = f"{_LINK_SOURCE_PREFIX}{link_type}"
+    raw_rows = _supabase_get_rows(
+        "asset_data_raw",
+        {
+            "select": "id,asset_id,source,payload_jsonb,created_at",
+            "asset_id": f"eq.{parent_asset_id}",
+            "source": f"eq.{source_value}",
+            "order": "created_at.desc",
+            "limit": "200",
+        },
+        config,
+    )
+
+    matches: list[dict[str, Any]] = []
+    for row in raw_rows:
+        payload = row.get("payload_jsonb")
+        if not isinstance(payload, dict):
+            continue
+
+        if payload.get("record_type") != "asset_link":
+            continue
+        if payload.get("organization_id") != organization_id:
+            continue
+        if payload.get("parent_asset_id") != parent_asset_id:
+            continue
+        if payload.get("child_asset_id") != child_asset_id:
+            continue
+        if payload.get("link_type") != link_type:
+            continue
+
+        matches.append(row)
+
+    return matches
+
+
+def _fallback_create_link(
+    organization_id: str,
+    parent_asset_id: str,
+    child_asset_id: str,
+    link_type: str,
+    config: RuntimeConfig,
+) -> dict[str, Any]:
+    fallback_rows = _get_fallback_link_rows(
+        organization_id=organization_id,
+        parent_asset_id=parent_asset_id,
+        child_asset_id=child_asset_id,
+        link_type=link_type,
+        config=config,
+    )
+
+    if fallback_rows:
+        row = fallback_rows[0]
+        return {
+            "id": row.get("id"),
+            "parent_asset_id": parent_asset_id,
+            "child_asset_id": child_asset_id,
+            "link_type": link_type,
+        }
+
+    source_value = f"{_LINK_SOURCE_PREFIX}{link_type}"
+    created_row = _insert_supabase_row(
+        "asset_data_raw",
+        {
+            "asset_id": parent_asset_id,
+            "source": source_value,
+            "payload_jsonb": {
+                "record_type": "asset_link",
+                "organization_id": organization_id,
+                "parent_asset_id": parent_asset_id,
+                "child_asset_id": child_asset_id,
+                "link_type": link_type,
+            },
+        },
+        config,
+    )
+
+    return {
+        "id": created_row.get("id"),
+        "parent_asset_id": parent_asset_id,
+        "child_asset_id": child_asset_id,
+        "link_type": link_type,
+    }
+
+
+def _fallback_delete_link(
+    organization_id: str,
+    parent_asset_id: str,
+    child_asset_id: str,
+    link_type: str,
+    config: RuntimeConfig,
+) -> bool:
+    fallback_rows = _get_fallback_link_rows(
+        organization_id=organization_id,
+        parent_asset_id=parent_asset_id,
+        child_asset_id=child_asset_id,
+        link_type=link_type,
+        config=config,
+    )
+
+    if not fallback_rows:
+        return False
+
+    _delete_supabase_row_by_id("asset_data_raw", str(fallback_rows[0].get("id")), config)
+    return True
 
 
 @app.route(route="assets", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
@@ -643,18 +762,30 @@ def assets_link_create(req: func.HttpRequest) -> func.HttpResponse:
         if not child_rows:
             return _bad_request("Invalid payload")
 
-        existing_rows = _supabase_get_rows(
-            "asset_links",
-            {
-                "select": "id,parent_asset_id,child_asset_id,link_type",
-                "organization_id": f"eq.{organization_id}",
-                "parent_asset_id": f"eq.{parent_asset_id}",
-                "child_asset_id": f"eq.{child_asset_id}",
-                "link_type": f"eq.{link_type}",
-                "limit": "1",
-            },
-            config,
-        )
+        try:
+            existing_rows = _supabase_get_rows(
+                "asset_links",
+                {
+                    "select": "id,parent_asset_id,child_asset_id,link_type",
+                    "organization_id": f"eq.{organization_id}",
+                    "parent_asset_id": f"eq.{parent_asset_id}",
+                    "child_asset_id": f"eq.{child_asset_id}",
+                    "link_type": f"eq.{link_type}",
+                    "limit": "1",
+                },
+                config,
+            )
+        except RuntimeError as exc:
+            if _is_missing_asset_links_table_error(exc):
+                existing_rows = _get_fallback_link_rows(
+                    organization_id=organization_id,
+                    parent_asset_id=parent_asset_id,
+                    child_asset_id=child_asset_id,
+                    link_type=link_type,
+                    config=config,
+                )
+            else:
+                raise
 
         if existing_rows:
             existing_row = existing_rows[0]
@@ -673,16 +804,28 @@ def assets_link_create(req: func.HttpRequest) -> func.HttpResponse:
                 mimetype="application/json",
             )
 
-        created_row = _insert_supabase_row(
-            "asset_links",
-            {
-                "organization_id": organization_id,
-                "parent_asset_id": parent_asset_id,
-                "child_asset_id": child_asset_id,
-                "link_type": link_type,
-            },
-            config,
-        )
+        try:
+            created_row = _insert_supabase_row(
+                "asset_links",
+                {
+                    "organization_id": organization_id,
+                    "parent_asset_id": parent_asset_id,
+                    "child_asset_id": child_asset_id,
+                    "link_type": link_type,
+                },
+                config,
+            )
+        except RuntimeError as exc:
+            if _is_missing_asset_links_table_error(exc):
+                created_row = _fallback_create_link(
+                    organization_id=organization_id,
+                    parent_asset_id=parent_asset_id,
+                    child_asset_id=child_asset_id,
+                    link_type=link_type,
+                    config=config,
+                )
+            else:
+                raise
 
         return func.HttpResponse(
             json.dumps(
@@ -719,18 +862,32 @@ def assets_link_delete(req: func.HttpRequest) -> func.HttpResponse:
         link_type = payload["link_type"]
         config = _get_config()
 
-        matching_rows = _supabase_get_rows(
-            "asset_links",
-            {
-                "select": "id,parent_asset_id,child_asset_id,link_type",
-                "organization_id": f"eq.{organization_id}",
-                "parent_asset_id": f"eq.{parent_asset_id}",
-                "child_asset_id": f"eq.{child_asset_id}",
-                "link_type": f"eq.{link_type}",
-                "limit": "1",
-            },
-            config,
-        )
+        used_fallback = False
+        try:
+            matching_rows = _supabase_get_rows(
+                "asset_links",
+                {
+                    "select": "id,parent_asset_id,child_asset_id,link_type",
+                    "organization_id": f"eq.{organization_id}",
+                    "parent_asset_id": f"eq.{parent_asset_id}",
+                    "child_asset_id": f"eq.{child_asset_id}",
+                    "link_type": f"eq.{link_type}",
+                    "limit": "1",
+                },
+                config,
+            )
+        except RuntimeError as exc:
+            if _is_missing_asset_links_table_error(exc):
+                used_fallback = True
+                matching_rows = _get_fallback_link_rows(
+                    organization_id=organization_id,
+                    parent_asset_id=parent_asset_id,
+                    child_asset_id=child_asset_id,
+                    link_type=link_type,
+                    config=config,
+                )
+            else:
+                raise
 
         if not matching_rows:
             return func.HttpResponse(
@@ -745,7 +902,28 @@ def assets_link_delete(req: func.HttpRequest) -> func.HttpResponse:
                 mimetype="application/json",
             )
 
-        _delete_supabase_row_by_id("asset_links", str(matching_rows[0].get("id")), config)
+        if used_fallback:
+            deleted = _fallback_delete_link(
+                organization_id=organization_id,
+                parent_asset_id=parent_asset_id,
+                child_asset_id=child_asset_id,
+                link_type=link_type,
+                config=config,
+            )
+            if not deleted:
+                return func.HttpResponse(
+                    json.dumps(
+                        {
+                            "ok": False,
+                            "code": "ASSET_LINK_NOT_FOUND",
+                        }
+                    ),
+                    status_code=404,
+                    headers=_build_headers(),
+                    mimetype="application/json",
+                )
+        else:
+            _delete_supabase_row_by_id("asset_links", str(matching_rows[0].get("id")), config)
 
         return func.HttpResponse(
             json.dumps(
