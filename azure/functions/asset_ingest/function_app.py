@@ -341,6 +341,22 @@ def _asset_upsert_internal_error() -> func.HttpResponse:
     )
 
 
+def _asset_raw_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_RAW_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 def _extract_link_payload(req: func.HttpRequest) -> tuple[dict[str, str] | None, func.HttpResponse | None]:
     try:
         body = req.get_json()
@@ -532,6 +548,15 @@ def _timeline_bad_request() -> func.HttpResponse:
 
 
 def _snapshot_bad_request() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps({"ok": False, "error": "Invalid request"}),
+        status_code=400,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
+def _raw_bad_request() -> func.HttpResponse:
     return func.HttpResponse(
         json.dumps({"ok": False, "error": "Invalid request"}),
         status_code=400,
@@ -1186,6 +1211,83 @@ def asset_snapshot(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset snapshot failed")
         return _asset_snapshot_internal_error()
+
+
+@app.route(route="assets/{asset_id}/raw", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def asset_raw_list(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return error_response
+
+        asset_id_raw = req.route_params.get("asset_id")
+        if not asset_id_raw:
+            return _raw_bad_request()
+
+        try:
+            normalized_asset_id = str(uuid.UUID(asset_id_raw))
+        except ValueError:
+            return _raw_bad_request()
+
+        limit_raw = req.params.get("limit", "50")
+        offset_raw = req.params.get("offset", "0")
+        try:
+            limit = int(limit_raw)
+            offset = int(offset_raw)
+        except ValueError:
+            return _raw_bad_request()
+
+        if limit < 1 or limit > 200 or offset < 0:
+            return _raw_bad_request()
+
+        config = _get_config()
+        assets = _supabase_get_rows(
+            "assets",
+            {
+                "select": "id",
+                "organization_id": f"eq.{organization_id}",
+                "id": f"eq.{normalized_asset_id}",
+                "limit": "1",
+            },
+            config,
+        )
+
+        if not assets:
+            return func.HttpResponse(
+                json.dumps({"ok": False, "code": "ASSET_NOT_FOUND"}),
+                status_code=404,
+                headers=_build_headers(),
+                mimetype="application/json",
+            )
+
+        raw_rows = _supabase_get_rows(
+            "asset_data_raw",
+            {
+                "select": "id,asset_id,source,payload_jsonb,fetched_at",
+                "asset_id": f"eq.{normalized_asset_id}",
+                "order": "fetched_at.desc",
+                "limit": str(limit),
+                "offset": str(offset),
+            },
+            config,
+        )
+
+        return func.HttpResponse(
+            json.dumps(
+                {
+                    "ok": True,
+                    "items": raw_rows,
+                    "limit": limit,
+                    "offset": offset,
+                }
+            ),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="application/json",
+        )
+    except Exception:
+        logging.exception("Asset raw list failed")
+        return _asset_raw_internal_error()
 
 
 @app.route(route="assets/bulk-resolve", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
