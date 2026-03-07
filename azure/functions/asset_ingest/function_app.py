@@ -309,6 +309,22 @@ def _asset_snapshot_internal_error() -> func.HttpResponse:
     )
 
 
+def _asset_bulk_resolve_internal_error() -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "ok": False,
+                "code": "ASSET_BULK_RESOLVE_INTERNAL",
+                "error": "Internal server error",
+                "status": 500,
+            }
+        ),
+        status_code=500,
+        headers=_build_headers(),
+        mimetype="application/json",
+    )
+
+
 def _extract_link_payload(req: func.HttpRequest) -> tuple[dict[str, str] | None, func.HttpResponse | None]:
     try:
         body = req.get_json()
@@ -523,6 +539,90 @@ def _timeline_derive_event_type(row: dict[str, Any], raw_ingest_row_id: str | No
         return "raw_ingest"
 
     return "enrichment_write"
+
+
+def _normalize_matchable_asset_fields(asset: dict[str, Any]) -> dict[str, str] | None:
+    field_names = ["apn", "clip", "address_canonical", "display_name"]
+    normalized: dict[str, str] = {}
+    for field_name in field_names:
+        field_value = asset.get(field_name)
+        if field_value is None:
+            normalized[field_name] = ""
+            continue
+
+        if not isinstance(field_value, str):
+            return None
+
+        normalized[field_name] = field_value.strip()
+
+    return normalized
+
+
+def _match_asset_candidates(
+    organization_id: str,
+    normalized_fields: dict[str, str],
+    config: RuntimeConfig,
+) -> tuple[str, list[dict[str, Any]]]:
+    field_names = ["apn", "clip", "address_canonical", "display_name"]
+    projection = "id,organization_id,asset_type,status,display_name,address_canonical,apn,clip,created_at,updated_at"
+
+    for strategy in field_names:
+        strategy_value = normalized_fields.get(strategy, "")
+        if not strategy_value:
+            continue
+
+        candidates = _supabase_get_rows(
+            "assets",
+            {
+                "select": projection,
+                "organization_id": f"eq.{organization_id}",
+                strategy: f"eq.{strategy_value}",
+                "order": "created_at.desc",
+            },
+            config,
+        )
+        if candidates:
+            return strategy, candidates
+
+    return "none", []
+
+
+def _create_resolved_asset(
+    organization_id: str,
+    asset: dict[str, Any],
+    normalized_fields: dict[str, str],
+    config: RuntimeConfig,
+) -> dict[str, Any]:
+    display_name = normalized_fields.get("display_name")
+    if not display_name:
+        display_name = (
+            normalized_fields.get("address_canonical")
+            or normalized_fields.get("apn")
+            or normalized_fields.get("clip")
+            or "RESOLVED_ASSET"
+        )
+
+    asset_type_value = asset.get("asset_type")
+    if asset_type_value is not None and not isinstance(asset_type_value, str):
+        raise ValueError("Invalid payload")
+    asset_type = asset_type_value.strip() if isinstance(asset_type_value, str) else "PROPERTY"
+    if not asset_type:
+        asset_type = "PROPERTY"
+
+    return _insert_supabase_row(
+        "assets",
+        {
+            "organization_id": organization_id,
+            "asset_type": asset_type,
+            "status": "ACTIVE",
+            "display_name": display_name,
+            "address_canonical": normalized_fields.get("address_canonical") or None,
+            "apn": normalized_fields.get("apn") or None,
+            "clip": normalized_fields.get("clip") or None,
+            "external_ids": {},
+        },
+        config,
+    )
 
 
 def _build_timeline_items(raw_rows: list[dict[str, Any]], limit: int, offset: int) -> list[dict[str, Any]]:
@@ -1025,6 +1125,100 @@ def asset_snapshot(req: func.HttpRequest) -> func.HttpResponse:
     except Exception:
         logging.exception("Asset snapshot failed")
         return _asset_snapshot_internal_error()
+
+
+@app.route(route="assets/bulk-resolve", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def assets_bulk_resolve(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        organization_id, error_response = _require_org_id(req)
+        if error_response is not None:
+            return error_response
+
+        try:
+            body = req.get_json()
+        except ValueError:
+            return _bad_request("Invalid payload")
+
+        if not isinstance(body, dict):
+            return _bad_request("Invalid payload")
+
+        items = body.get("items")
+        if not isinstance(items, list) or not items:
+            return _bad_request("Invalid payload")
+
+        parsed_items: list[tuple[str, dict[str, Any], dict[str, str]]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                return _bad_request("Invalid payload")
+
+            client_row_id = item.get("client_row_id")
+            asset = item.get("asset")
+            if not isinstance(client_row_id, str) or not client_row_id.strip():
+                return _bad_request("Invalid payload")
+            if not isinstance(asset, dict):
+                return _bad_request("Invalid payload")
+
+            normalized_fields = _normalize_matchable_asset_fields(asset)
+            if normalized_fields is None:
+                return _bad_request("Invalid payload")
+
+            if not any(normalized_fields.values()):
+                return _bad_request("Invalid payload")
+
+            parsed_items.append((client_row_id, asset, normalized_fields))
+
+        config = _get_config()
+        results: list[dict[str, Any]] = []
+
+        for client_row_id, asset, normalized_fields in parsed_items:
+            match_strategy, candidates = _match_asset_candidates(
+                organization_id=organization_id,
+                normalized_fields=normalized_fields,
+                config=config,
+            )
+
+            if candidates:
+                results.append(
+                    {
+                        "client_row_id": client_row_id,
+                        "resolution": "matched",
+                        "asset_id": candidates[0].get("id"),
+                        "match_strategy": match_strategy,
+                    }
+                )
+                continue
+
+            created_asset = _create_resolved_asset(
+                organization_id=organization_id,
+                asset=asset,
+                normalized_fields=normalized_fields,
+                config=config,
+            )
+            results.append(
+                {
+                    "client_row_id": client_row_id,
+                    "resolution": "created",
+                    "asset_id": created_asset.get("id"),
+                    "match_strategy": "none",
+                }
+            )
+
+        return func.HttpResponse(
+            json.dumps(
+                {
+                    "ok": True,
+                    "items": results,
+                }
+            ),
+            status_code=200,
+            headers=_build_headers(),
+            mimetype="application/json",
+        )
+    except ValueError:
+        return _bad_request("Invalid payload")
+    except Exception:
+        logging.exception("Asset bulk resolve failed")
+        return _asset_bulk_resolve_internal_error()
 
 
 @app.route(route="assets/match", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
