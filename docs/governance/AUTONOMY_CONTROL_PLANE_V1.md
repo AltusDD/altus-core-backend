@@ -66,6 +66,9 @@ CD receives final validated result
 - Bundle and final return contract authorities:
    - `docs/governance/BE_ACCEPTANCE_BUNDLE_STANDARD_V1.md`
    - `docs/governance/BE_FINAL_RETURN_TEMPLATE_V1.md`
+- Codex local worker role and operator setup authorities:
+   - `docs/governance/CODEX_LOCAL_EXECUTION_ROLE_V1.md`
+   - `docs/governance/CODEX_OPERATOR_SETUP_GUIDE_V1.md`
 
 ## Labels
 

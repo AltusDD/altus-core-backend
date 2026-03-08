@@ -173,6 +173,8 @@ Finalization must preserve exactly one `status:*` label.
 - AUTONOMY-04 standard milestone bundle shape is required for backend milestones: `docs/proofpacks/<YYYY-MM-DD>_be-core_<milestone>`.
 - Bundle contract authority: `docs/governance/BE_ACCEPTANCE_BUNDLE_STANDARD_V1.md`.
 - Final return contract authority: `docs/governance/BE_FINAL_RETURN_TEMPLATE_V1.md`.
+- Codex local worker role authority: `docs/governance/CODEX_LOCAL_EXECUTION_ROLE_V1.md`.
+- Codex operator setup authority: `docs/governance/CODEX_OPERATOR_SETUP_GUIDE_V1.md`.
 - `worker_execute_backend.yml` must emit, at minimum:
   - `README.md`
   - `proof_manifest.json`
