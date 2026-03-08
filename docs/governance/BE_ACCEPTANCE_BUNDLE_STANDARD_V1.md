@@ -86,3 +86,25 @@ Bundle is invalid if any are true:
 - Finalization references emitted bundle path.
 - Proof collector uploads full deterministic folder.
 - Validation scripts must be repo-native and runnable without external manual processing.
+
+## Asset Contract Negative-Proof Addendum
+
+For runtime-affecting asset contract milestones, include deterministic negative-proof artifacts in the same proof folder.
+
+Required additive files for negative-proof execution:
+
+- `negative_proof_results.json`
+- `negative_<route>_<case>_http_raw.txt` artifacts (deterministic, lowercase, underscore-separated)
+
+Required negative-proof metadata per case:
+
+- route + method
+- expected status and actual status
+- JSON body-shape check result
+- reviewed/live SHA continuity check (`x-altus-build-sha` must match reviewed SHA lineage)
+- pass/fail result
+- raw artifact filename
+
+`validation.txt` must include raw output from the negative-proof execution script and indicate whether each case passed or failed.
+
+This addendum is strictly additive and does not relax any required files or gates defined above.

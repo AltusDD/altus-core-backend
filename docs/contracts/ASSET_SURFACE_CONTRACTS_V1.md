@@ -19,6 +19,18 @@ All asset routes require header:
 
 Requests without this header must return HTTP 400.
 
+## NEGATIVE PROOF STANDARD (ACCEPTED ASSET ROUTES)
+
+Accepted asset routes must include deterministic negative-proof evidence in runtime-affecting bundles.
+
+Required negative classes (where applicable to route shape):
+
+- Missing required header `x-altus-org-id` must return `400` with JSON body containing `ok` and `error`.
+- Invalid UUID in `x-altus-org-id` must return `400` with JSON body containing `ok` and `error`.
+- Invalid payload for JSON body routes must return `400` with JSON body containing `ok` and `error`.
+- Internal error responses remain deterministic JSON shape: `{ ok:false, code:<STRING>, error:"Internal server error", status:500 }` for route-specific internal error code paths.
+
+Bundled negative proof for accepted surfaces must preserve reviewed/live SHA continuity via response header `x-altus-build-sha`.
 ## assets_list
 
 - Route: `GET /api/assets`
@@ -322,3 +334,4 @@ Requests without this header must return HTTP 400.
 {"ok":true,"asset_id":"0f0a9bf7-3c24-45eb-b8e8-24ee361791e0","status":"ACTIVE","source":"MANUAL"}
 ```
 - Regression assertions: canonicalization/hash path remains deterministic; raw ingest evidence stored in `asset_data_raw`.
+
