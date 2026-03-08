@@ -134,17 +134,19 @@ Global required request header (all surfaces):
 ## assets_resolve
 
 - Route: `POST /api/assets/resolve`
-- Handler: Not currently exposed in `function_app.py` (reserved contract surface)
+- Handler: `assets_resolve`
 - Query params: none
-- Canonical response: Resolution behavior is provided by `assets_match` + `assets_upsert` + `assets_bulk_resolve` in current accepted runtime.
-- Guaranteed fields: N/A (reserved)
-- Nullable fields: N/A (reserved)
-- Failures: N/A (reserved)
-- Example payload:
+- Required headers: `x-altus-org-id: <uuid>`, `Content-Type: application/json`
+- Canonical request shape: `{ "asset": { "display_name"?, "address_canonical"?, "apn"?, "clip"?, "asset_type"? } }` with at least one matchable identity key (`display_name`, `address_canonical`, `apn`, `clip`).
+- Canonical success response shape: `{ "ok": true, "resolution": "matched|created", "asset_id": "<uuid>", "match_strategy": "<strategy|none>" }`
+- Canonical failure response shape: `400 { ok:false, error }`, `500 { ok:false, code:"ASSET_RESOLVE_INTERNAL", error:"Internal server error", status:500 }`
+- Guaranteed fields: `ok`, `resolution`, `asset_id`, `match_strategy`
+- Nullable fields: none
+- Example success payload:
 ```json
-{"ok":false,"error":"Surface reserved; use /api/assets/match or /api/assets/bulk-resolve in current runtime."}
+{"ok":true,"resolution":"matched","asset_id":"7c9d0ddf-7de7-4e5d-8fda-a6e2e56d6179","match_strategy":"apn"}
 ```
-- Regression assertions: no hidden contract assumed; docs explicitly track runtime truth.
+- Regression assertions: accepted route remains live and org-scoped; matched path never creates duplicates and created path emits deterministic `resolution` + `asset_id` + `match_strategy` fields.
 
 ## assets_bulk_resolve
 

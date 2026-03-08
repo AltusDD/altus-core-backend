@@ -8,7 +8,7 @@ Canonical route owner: `azure/functions/asset_ingest/function_app.py`
 |---|---|---|---|---|
 | POST | `/api/assets/ingest` | `assets_ingest` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
 | POST | `/api/assets/match` | `assets_match` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
-| POST | `/api/assets/resolve` | `N/A (reserved)` | `azure/functions/asset_ingest/function_app.py` | Reserved contract surface; not exposed as standalone route in current module |
+| POST | `/api/assets/resolve` | `assets_resolve` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
 | POST | `/api/assets/bulk-resolve` | `assets_bulk_resolve` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
 | POST | `/api/assets/upsert` | `assets_upsert` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
 | POST | `/api/assets/link` | `assets_link_create` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
@@ -32,4 +32,4 @@ Canonical route owner: `azure/functions/asset_ingest/function_app.py`
 
 - Route ownership in this map is derived from live decorators in `function_app.py`.
 - Any route addition/removal requires this map update in the same PR.
-- Placeholder contract surfaces (for example `/api/assets/resolve`) must remain explicitly marked as reserved until live handler ownership exists.
+- Accepted contract surfaces must remain mapped to live handlers and cannot be downgraded in documentation.
