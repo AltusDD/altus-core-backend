@@ -13,6 +13,11 @@ import requests
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from price_engine_handler import handle_price_engine_calculate
+from ecc_system_health_handler import handle_ecc_system_health
+from ecc_asset_metrics_handler import handle_ecc_asset_metrics
+from ecc_asset_search_handler import handle_ecc_asset_search
+from ecc_portfolio_assets_handler import handle_ecc_portfolio_assets
+from ecc_portfolio_summary_handler import handle_ecc_portfolio_summary
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -3305,3 +3310,18 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="price-engine/calculate", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def price_engine_calculate(req: func.HttpRequest) -> func.HttpResponse:
     return handle_price_engine_calculate(req, _build_headers)
+@app.route(route="ecc/system/health", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_system_health(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_system_health(req, _build_headers)
+@app.route(route="ecc/assets/metrics", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_asset_metrics(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_asset_metrics(req, _build_headers)
+@app.route(route="ecc/assets/search", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_asset_search(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_asset_search(req, _build_headers)
+@app.route(route="ecc/portfolio/assets", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_portfolio_assets(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_portfolio_assets(req, _build_headers)
+@app.route(route="ecc/portfolio/summary", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_portfolio_summary(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_portfolio_summary(req, _build_headers)
