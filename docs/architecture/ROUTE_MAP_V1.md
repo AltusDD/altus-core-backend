@@ -27,6 +27,7 @@ Canonical route owner: `azure/functions/asset_ingest/function_app.py`
 | GET | `/api/assets/{id}/snapshot` | `asset_snapshot` | `azure/functions/asset_ingest/function_app.py` | Runtime path param name: `{asset_id}` |
 | GET | `/api/assets/{id}/audit` | `asset_audit` | `azure/functions/asset_ingest/function_app.py` | Runtime path param name: `{asset_id}` |
 | GET | `/api/assets/search` | `assets_search` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
+| GET | `/api/ecc/assets/search` | `ecc_asset_search` | `azure/functions/asset_ingest/function_app.py` | ECC list stub for asset search with normalized match scores |
 
 ## Determinism Notes
 
