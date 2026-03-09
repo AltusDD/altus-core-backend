@@ -12,6 +12,7 @@ import azure.functions as func
 import requests
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from ecc_asset_metrics_handler import handle_ecc_asset_metrics
 from ecc_asset_search_handler import handle_ecc_asset_search
 from ecc_portfolio_assets_handler import handle_ecc_portfolio_assets
 from ecc_portfolio_summary_handler import handle_ecc_portfolio_summary
@@ -3304,6 +3305,9 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
         return _internal_error()
 
 
+@app.route(route="ecc/assets/metrics", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_asset_metrics(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_asset_metrics(req, _build_headers)
 @app.route(route="ecc/assets/search", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def ecc_asset_search(req: func.HttpRequest) -> func.HttpResponse:
     return handle_ecc_asset_search(req, _build_headers)
