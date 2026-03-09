@@ -12,6 +12,7 @@ import azure.functions as func
 import requests
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from ecc_system_health_handler import handle_ecc_system_health
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -3300,3 +3301,7 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
         logging.exception("Asset ingest failed")
         return _internal_error()
 
+
+@app.route(route="ecc/system/health", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_system_health(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_system_health(req, _build_headers)
