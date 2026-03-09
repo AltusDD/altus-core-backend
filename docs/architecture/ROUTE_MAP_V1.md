@@ -27,6 +27,7 @@ Canonical route owner: `azure/functions/asset_ingest/function_app.py`
 | GET | `/api/assets/{id}/snapshot` | `asset_snapshot` | `azure/functions/asset_ingest/function_app.py` | Runtime path param name: `{asset_id}` |
 | GET | `/api/assets/{id}/audit` | `asset_audit` | `azure/functions/asset_ingest/function_app.py` | Runtime path param name: `{asset_id}` |
 | GET | `/api/assets/search` | `assets_search` | `azure/functions/asset_ingest/function_app.py` | Accepted live route |
+| GET | `/api/ecc/system/health` | `ecc_system_health` | `azure/functions/asset_ingest/function_app.py` | ECC singleton health stub with deterministic component status values |
 | GET | `/api/ecc/assets/metrics` | `ecc_asset_metrics` | `azure/functions/asset_ingest/function_app.py` | ECC singleton stub for asset metrics with normalized occupancy values |
 | GET | `/api/ecc/assets/search` | `ecc_asset_search` | `azure/functions/asset_ingest/function_app.py` | ECC list stub for asset search with normalized match scores |
 | GET | `/api/ecc/portfolio/assets` | `ecc_portfolio_assets` | `azure/functions/asset_ingest/function_app.py` | ECC list stub for portfolio asset membership with pagination meta |
