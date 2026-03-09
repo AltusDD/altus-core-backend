@@ -12,6 +12,7 @@ import azure.functions as func
 import requests
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from ecc_portfolio_summary_handler import handle_ecc_portfolio_summary
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -3300,3 +3301,7 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
         logging.exception("Asset ingest failed")
         return _internal_error()
 
+
+@app.route(route="ecc/portfolio/summary", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_portfolio_summary(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_portfolio_summary(req, _build_headers)
