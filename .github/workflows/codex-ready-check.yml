@@ -1,0 +1,81 @@
+name: Codex Ready Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      objective:
+        description: 'Short objective for the task'
+        required: true
+        type: string
+      constraints:
+        description: 'Key constraints or guardrails'
+        required: true
+        type: string
+      scope:
+        description: 'Files or systems in scope'
+        required: true
+        type: string
+      acceptance_checks:
+        description: 'Acceptance checks to confirm readiness'
+        required: true
+        type: string
+      do_not_touch:
+        description: 'Explicit do-not-touch list'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  normalize-task:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required metadata
+        shell: bash
+        env:
+          OBJECTIVE: ${{ inputs.objective }}
+          CONSTRAINTS: ${{ inputs.constraints }}
+          SCOPE: ${{ inputs.scope }}
+          ACCEPTANCE_CHECKS: ${{ inputs.acceptance_checks }}
+          DO_NOT_TOUCH: ${{ inputs.do_not_touch }}
+        run: |
+          set -euo pipefail
+
+          for name in OBJECTIVE CONSTRAINTS SCOPE ACCEPTANCE_CHECKS DO_NOT_TOUCH; do
+            value="${!name}"
+            if [ -z "${value// }" ]; then
+              echo "::error::${name} is required."
+              exit 1
+            fi
+          done
+
+      - name: Emit normalized ready summary
+        shell: bash
+        run: |
+          {
+            echo "## Ready for Codex"
+            echo ""
+            echo "- Repository: ${GITHUB_REPOSITORY}"
+            echo "- Ref: ${GITHUB_REF_NAME}"
+            echo "- Actor: ${GITHUB_ACTOR}"
+            echo "- Objective: ${{ inputs.objective }}"
+            echo "- Constraints: ${{ inputs.constraints }}"
+            echo "- Scope: ${{ inputs.scope }}"
+            echo "- Acceptance checks: ${{ inputs.acceptance_checks }}"
+            echo "- Do not touch: ${{ inputs.do_not_touch }}"
+            echo "- Safety: manual-only, read-safe, no cross-repo mutation"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Echo machine-readable payload
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "ready_for_codex=true" \
+            "repository=${GITHUB_REPOSITORY}" \
+            "ref=${GITHUB_REF_NAME}" \
+            "objective=${{ inputs.objective }}" \
+            "constraints=${{ inputs.constraints }}" \
+            "scope=${{ inputs.scope }}" \
+            "acceptance_checks=${{ inputs.acceptance_checks }}" \
+            "do_not_touch=${{ inputs.do_not_touch }}"
