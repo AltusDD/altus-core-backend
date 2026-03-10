@@ -30,6 +30,21 @@ jobs:
           tenant-id: 41f56839-6a08-4c0b-bf66-4f8ceac8816b
           subscription-id: 3d1966c1-5273-4091-aab4-07c125e7b96d
 
+      - name: Set required Function App settings (worker indexing)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az functionapp config appsettings set \
+              --resource-group altus-core-staging-rg \
+              --name altus-core-staging-func \
+              --settings \
+                ALTUS_BUILD_SHA=${{ github.sha }} \
+                AzureWebJobsFeatureFlags=EnableWorkerIndexing \
+                FUNCTIONS_WORKER_RUNTIME=python \
+                FUNCTIONS_EXTENSION_VERSION=~4 \
+                SCM_DO_BUILD_DURING_DEPLOYMENT=1 \
+                ENABLE_ORYX_BUILD=true
+
       - name: Deploy to staging Function App
         uses: azure/cli@v2
         with:
@@ -37,4 +52,5 @@ jobs:
             az functionapp deployment source config-zip \
               --resource-group altus-core-staging-rg \
               --name altus-core-staging-func \
-              --src asset_ingest.zip
+              --src asset_ingest.zip \
+              --build-remote true
