@@ -9,6 +9,12 @@ import azure.functions as func
 import requests
 from azure.identity import ManagedIdentityCredential
 from azure.keyvault.secrets import SecretClient
+from ecc_portfolio_summary_handler import handle_ecc_portfolio_summary
+from ecc_portfolio_assets_handler import handle_ecc_portfolio_assets
+from ecc_asset_search_handler import handle_ecc_asset_search
+from ecc_asset_metrics_handler import handle_ecc_asset_metrics
+from ecc_system_health_handler import handle_ecc_system_health
+from price_engine_handler import handle_price_engine_calculate
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -29,6 +35,13 @@ class RuntimeConfig:
 
 
 _config: RuntimeConfig | None = None
+
+
+def _build_headers() -> dict[str, str]:
+    build_sha = os.getenv("ALTUS_BUILD_SHA", "unknown")
+    return {
+        "x-altus-build-sha": build_sha,
+    }
 
 
 def _get_config() -> RuntimeConfig:
@@ -165,3 +178,33 @@ def assets_ingest(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500,
             mimetype="application/json",
         )
+
+
+@app.route(route="ecc/portfolio/summary", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_portfolio_summary(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_portfolio_summary(req, _build_headers)
+
+
+@app.route(route="ecc/portfolio/assets", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_portfolio_assets(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_portfolio_assets(req, _build_headers)
+
+
+@app.route(route="ecc/assets/search", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_asset_search(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_asset_search(req, _build_headers)
+
+
+@app.route(route="ecc/assets/metrics", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_asset_metrics(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_asset_metrics(req, _build_headers)
+
+
+@app.route(route="ecc/system/health", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def ecc_system_health(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_ecc_system_health(req, _build_headers)
+
+
+@app.route(route="price-engine/calculate", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def price_engine_calculate(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_price_engine_calculate(req, _build_headers)
