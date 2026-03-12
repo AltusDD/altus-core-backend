@@ -2,8 +2,6 @@ name: db_proof_gate
 
 on:
   pull_request:
-    branches:
-      - main
     paths:
       - "supabase/migrations/**"
       - "supabase/verification/**"
