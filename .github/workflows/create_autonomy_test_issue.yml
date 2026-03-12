@@ -1,0 +1,56 @@
+name: create-autonomy-test-issue
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-test-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create autonomy validation issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'AUTONOMY-TEST-01 — Validate Backend Router -> Worker -> PR -> Proof Chain',
+              body: `Objective
+
+Validate the GitHub-native backend autonomy control plane.
+
+Execution chain to verify:
+
+Issue
+-> task_router
+-> codex_worker
+-> branch
+-> PR
+-> proof_gate
+
+Required Work
+
+Add a section titled "Autonomy Validation Run" to:
+
+docs/autonomy/AUTONOMY_EXECUTION_MODEL_V1.md
+
+Content should state that this issue verified the backend autonomy execution pipeline.
+
+Constraints
+
+* Documentation change only
+* No workflow edits
+* No deploy target changes
+* No secret changes
+* Keep changes repo-grounded
+
+Proof expectations
+
+* issue comment with branch and PR
+* proof gate artifact output on the resulting PR
+`,
+              labels: ['backend'],
+            });

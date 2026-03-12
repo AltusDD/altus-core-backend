@@ -1,0 +1,354 @@
+name: codex_worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: GitHub issue number
+        required: true
+        type: string
+      issue_title:
+        description: GitHub issue title
+        required: true
+        type: string
+      issue_body:
+        description: GitHub issue body
+        required: false
+        type: string
+      issue_labels:
+        description: JSON encoded label list
+        required: true
+        type: string
+      execution_class:
+        description: Routed execution class
+        required: true
+        type: string
+      issue_url:
+        description: GitHub issue URL
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    env:
+      SECRET_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SECRET_ALTUS_OPENAI_API_KEY: ${{ secrets.ALTUS_OPENAI_API_KEY }}
+      SECRET_ORG_OPENAI_API_KEY: ${{ secrets.ORG_OPENAI_API_KEY }}
+      SECRET_OPENAI_API_KEY_ALTUS: ${{ secrets.OPENAI_API_KEY_ALTUS }}
+      ISSUE_NUMBER: ${{ inputs.issue_number }}
+      ISSUE_TITLE: ${{ inputs.issue_title }}
+      ISSUE_BODY: ${{ inputs.issue_body }}
+      ISSUE_LABELS: ${{ inputs.issue_labels }}
+      EXECUTION_CLASS: ${{ inputs.execution_class }}
+      ISSUE_URL: ${{ inputs.issue_url }}
+      BRANCH_NAME: codex/issue-${{ inputs.issue_number }}-${{ inputs.execution_class }}
+      SECRET_CHAIN: OPENAI_API_KEY, ALTUS_OPENAI_API_KEY, ORG_OPENAI_API_KEY, OPENAI_API_KEY_ALTUS
+    outputs:
+      final_message: ${{ steps.run_codex.outputs.final-message }}
+      branch_name: ${{ env.BRANCH_NAME }}
+      pr_url: ${{ steps.create_pr.outputs.pull-request-url }}
+      pr_number: ${{ steps.create_pr.outputs.pull-request-number }}
+      pr_operation: ${{ steps.create_pr.outputs.pull-request-operation }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Build Codex task prompt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .codex
+          cat > .codex/task_prompt.md <<EOF
+          You are Codex running in GitHub Actions for ${GITHUB_REPOSITORY}.
+
+          Operate in non-interactive CI mode.
+          Complete the GitHub issue using the smallest additive change set that satisfies the request.
+          Keep edits grounded in this backend repository's actual routes, data surfaces, docs, and workflows.
+          Do not change deploy targets, runtime secrets, or production handlers unless the issue explicitly requires it.
+          Do not invent routes, data contracts, or environment behavior. If the issue is underspecified, make the safest reasonable assumption and document it in the final summary.
+
+          Issue number: ${ISSUE_NUMBER}
+          Issue URL: ${ISSUE_URL}
+          Execution class: ${EXECUTION_CLASS}
+          Labels JSON: ${ISSUE_LABELS}
+
+          Issue title:
+          ${ISSUE_TITLE}
+
+          Issue body:
+          ${ISSUE_BODY}
+
+          Required deliverables:
+          - Make the requested repository changes.
+          - Leave the repo in a state suitable for a pull request.
+          - Summarize what changed, what validation ran, and any remaining blockers.
+          EOF
+
+      - name: Resolve OpenAI secret candidate
+        id: resolve_secret
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mask_secret() {
+            if [ -n "$1" ]; then
+              echo "::add-mask::$1"
+            fi
+          }
+
+          mask_secret "${SECRET_OPENAI_API_KEY:-}"
+          mask_secret "${SECRET_ALTUS_OPENAI_API_KEY:-}"
+          mask_secret "${SECRET_ORG_OPENAI_API_KEY:-}"
+          mask_secret "${SECRET_OPENAI_API_KEY_ALTUS:-}"
+
+          present_openai_api_key=false
+          present_altus_openai_api_key=false
+          present_org_openai_api_key=false
+          present_openai_api_key_altus=false
+          selected_secret_name=none
+          selected_secret_present=false
+          selected_secret_value=
+
+          if [ -n "${SECRET_OPENAI_API_KEY:-}" ]; then
+            present_openai_api_key=true
+            selected_secret_name=OPENAI_API_KEY
+            selected_secret_present=true
+            selected_secret_value="${SECRET_OPENAI_API_KEY}"
+          fi
+
+          if [ "$selected_secret_present" = false ] && [ -n "${SECRET_ALTUS_OPENAI_API_KEY:-}" ]; then
+            present_altus_openai_api_key=true
+            selected_secret_name=ALTUS_OPENAI_API_KEY
+            selected_secret_present=true
+            selected_secret_value="${SECRET_ALTUS_OPENAI_API_KEY}"
+          elif [ -n "${SECRET_ALTUS_OPENAI_API_KEY:-}" ]; then
+            present_altus_openai_api_key=true
+          fi
+
+          if [ "$selected_secret_present" = false ] && [ -n "${SECRET_ORG_OPENAI_API_KEY:-}" ]; then
+            present_org_openai_api_key=true
+            selected_secret_name=ORG_OPENAI_API_KEY
+            selected_secret_present=true
+            selected_secret_value="${SECRET_ORG_OPENAI_API_KEY}"
+          elif [ -n "${SECRET_ORG_OPENAI_API_KEY:-}" ]; then
+            present_org_openai_api_key=true
+          fi
+
+          if [ "$selected_secret_present" = false ] && [ -n "${SECRET_OPENAI_API_KEY_ALTUS:-}" ]; then
+            present_openai_api_key_altus=true
+            selected_secret_name=OPENAI_API_KEY_ALTUS
+            selected_secret_present=true
+            selected_secret_value="${SECRET_OPENAI_API_KEY_ALTUS}"
+          elif [ -n "${SECRET_OPENAI_API_KEY_ALTUS:-}" ]; then
+            present_openai_api_key_altus=true
+          fi
+
+          if [ "$selected_secret_present" = true ]; then
+            echo "OPENAI_API_KEY=$selected_secret_value" >> "$GITHUB_ENV"
+          fi
+
+          {
+            echo "present_openai_api_key=$present_openai_api_key"
+            echo "present_altus_openai_api_key=$present_altus_openai_api_key"
+            echo "present_org_openai_api_key=$present_org_openai_api_key"
+            echo "present_openai_api_key_altus=$present_openai_api_key_altus"
+            echo "selected_secret_name=$selected_secret_name"
+            echo "selected_secret_present=$selected_secret_present"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Write worker summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          final_decision=skipped-no-api-key
+          if [ "${{ steps.resolve_secret.outputs.selected_secret_present }}" = "true" ]; then
+            final_decision=execute
+          fi
+
+          {
+            echo "SYSTEM HEALTH:"
+            echo "- router dispatch: ok"
+            echo "- worker invocation: ok"
+            echo "- issue context load: ok"
+            echo
+            echo "WORKER DEBUG:"
+            echo "- event name: ${GITHUB_EVENT_NAME}"
+            echo "- issue number: ${ISSUE_NUMBER}"
+            echo "- repo name: ${GITHUB_REPOSITORY}"
+            echo "- secret candidates checked: ${SECRET_CHAIN}"
+            echo "- OPENAI_API_KEY present: ${{ steps.resolve_secret.outputs.present_openai_api_key }}"
+            echo "- ALTUS_OPENAI_API_KEY present: ${{ steps.resolve_secret.outputs.present_altus_openai_api_key }}"
+            echo "- ORG_OPENAI_API_KEY present: ${{ steps.resolve_secret.outputs.present_org_openai_api_key }}"
+            echo "- OPENAI_API_KEY_ALTUS present: ${{ steps.resolve_secret.outputs.present_openai_api_key_altus }}"
+            echo "- selected secret: ${{ steps.resolve_secret.outputs.selected_secret_name }}"
+            echo "- final decision: ${final_decision}"
+            echo
+            echo "EXECUTION BLOCKER:"
+            if [ "$final_decision" = "execute" ]; then
+              echo "- supported OpenAI secret resolved"
+            else
+              echo "- no supported OpenAI secret available"
+              echo "- no code execution occurred because no supported secret exists"
+            fi
+            echo
+            echo "NOTE:"
+            echo "- GitHub reads repository and organization secrets when the workflow run is queued."
+            echo "- If the secret was added after queue time, rerun is required."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate API key availability
+        id: validate_api_key
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.resolve_secret.outputs.selected_secret_present }}" != "true" ]; then
+            echo "OPENAI_API_KEY not present. Codex worker will skip execution."
+            echo "has_api_key=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "has_api_key=true" >> "$GITHUB_OUTPUT"
+
+      - name: Run Codex
+        id: run_codex
+        if: steps.validate_api_key.outputs.has_api_key == 'true'
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ env.OPENAI_API_KEY }}
+          prompt-file: .codex/task_prompt.md
+          output-file: .codex/final_message.md
+          sandbox: workspace-write
+          safety-strategy: drop-sudo
+          model: gpt-5
+          effort: medium
+          allow-bots: true
+
+      - name: Create or update pull request
+        id: create_pr
+        if: steps.validate_api_key.outputs.has_api_key == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ github.token }}
+          commit-message: 'codex: resolve issue #${{ inputs.issue_number }}'
+          branch: ${{ env.BRANCH_NAME }}
+          title: 'Codex: resolve issue #${{ inputs.issue_number }}'
+          body: |
+            Resolves #${{ inputs.issue_number }}.
+
+            Execution class: `${{ inputs.execution_class }}`
+            Source issue: ${{ inputs.issue_url }}
+
+            Codex summary:
+            ${{ steps.run_codex.outputs.final-message }}
+          delete-branch: false
+
+      - name: Dispatch proof gate
+        if: steps.validate_api_key.outputs.has_api_key == 'true' && steps.create_pr.outputs.pull-request-number != ''
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
+          ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
+          BRANCH_NAME: ${{ env.BRANCH_NAME }}
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'proof_gate.yml',
+              ref: context.payload.repository?.default_branch || 'main',
+              inputs: {
+                pr_number: process.env.PR_NUMBER,
+                issue_number: process.env.ISSUE_NUMBER,
+                branch_name: process.env.BRANCH_NAME,
+              },
+            });
+
+      - name: Comment on issue with execution status
+        uses: actions/github-script@v7
+        env:
+          HAS_API_KEY: ${{ steps.validate_api_key.outputs.has_api_key }}
+          BRANCH_NAME: ${{ env.BRANCH_NAME }}
+          PR_URL: ${{ steps.create_pr.outputs.pull-request-url }}
+          PR_OPERATION: ${{ steps.create_pr.outputs.pull-request-operation }}
+          FINAL_MESSAGE: ${{ steps.run_codex.outputs.final-message }}
+          SECRET_CHAIN: ${{ env.SECRET_CHAIN }}
+          PRESENT_OPENAI_API_KEY: ${{ steps.resolve_secret.outputs.present_openai_api_key }}
+          PRESENT_ALTUS_OPENAI_API_KEY: ${{ steps.resolve_secret.outputs.present_altus_openai_api_key }}
+          PRESENT_ORG_OPENAI_API_KEY: ${{ steps.resolve_secret.outputs.present_org_openai_api_key }}
+          PRESENT_OPENAI_API_KEY_ALTUS: ${{ steps.resolve_secret.outputs.present_openai_api_key_altus }}
+          SELECTED_SECRET_NAME: ${{ steps.resolve_secret.outputs.selected_secret_name }}
+        with:
+          script: |
+            const hasApiKey = process.env.HAS_API_KEY === 'true';
+            const prUrl = process.env.PR_URL || 'not created';
+            const operation = process.env.PR_OPERATION || 'none';
+            const status = hasApiKey
+              ? (prUrl === 'not created' ? 'completed-without-pr' : `pr-${operation}`)
+              : 'skipped-no-api-key';
+            const summary = hasApiKey
+              ? (process.env.FINAL_MESSAGE || '').trim()
+              : 'External GitHub secret bootstrap blocker. Repo code is ready. GitHub reads repository and organization secrets when the workflow run is queued; rerun after adding or changing a supported secret.';
+            const body = [
+              '<!-- codex-worker-status -->',
+              '## Codex Worker Status',
+              `branch: ${process.env.BRANCH_NAME}`,
+              `pr: ${prUrl}`,
+              `status: ${status}`,
+              'worker_ready: true',
+              'router_ready: true',
+              'repo_code_ready: true',
+              `external_blocker: ${hasApiKey ? 'none' : 'github-secret-bootstrap'}`,
+              `secrets_checked: ${process.env.SECRET_CHAIN}`,
+              `OPENAI_API_KEY present: ${process.env.PRESENT_OPENAI_API_KEY}`,
+              `ALTUS_OPENAI_API_KEY present: ${process.env.PRESENT_ALTUS_OPENAI_API_KEY}`,
+              `ORG_OPENAI_API_KEY present: ${process.env.PRESENT_ORG_OPENAI_API_KEY}`,
+              `OPENAI_API_KEY_ALTUS present: ${process.env.PRESENT_OPENAI_API_KEY_ALTUS}`,
+              `selected_secret_name: ${process.env.SELECTED_SECRET_NAME}`,
+              '',
+              summary ? summary : 'No additional summary was returned by Codex.',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(process.env.ISSUE_NUMBER),
+              body,
+            });
+
+  fail_comment:
+    runs-on: ubuntu-latest
+    needs: execute
+    if: failure()
+    permissions:
+      issues: write
+    steps:
+      - name: Report workflow failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number('${{ inputs.issue_number }}'),
+              body: [
+                '<!-- codex-worker-status -->',
+                '## Codex Worker Status',
+                `branch: codex/issue-${{ inputs.issue_number }}-${{ inputs.execution_class }}`,
+                'pr: not created',
+                'status: failed',
+                '',
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              ].join('\n'),
+            });
+
+
+

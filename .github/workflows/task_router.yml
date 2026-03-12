@@ -1,0 +1,124 @@
+name: task_router
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+  workflow_run:
+    workflows:
+      - create-autonomy-test-issue
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to route manually
+        required: false
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+  issues: read
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve issue number from repository
+        id: resolve_issue
+        uses: actions/github-script@v7
+        env:
+          INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
+        with:
+          script: |
+            let issueNumber = null;
+
+            if (context.payload.issue && context.payload.issue.number) {
+              issueNumber = context.payload.issue.number;
+            } else if ((process.env.INPUT_ISSUE_NUMBER || '').trim() !== '') {
+              issueNumber = Number((process.env.INPUT_ISSUE_NUMBER || '').trim());
+            } else {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                sort: 'created',
+                direction: 'desc',
+                per_page: 1,
+              });
+
+              if (issues.data.length > 0) {
+                issueNumber = issues.data[0].number;
+              }
+            }
+
+            if (!issueNumber) {
+              core.setFailed('No issue could be resolved');
+              return;
+            }
+
+            core.setOutput('issue_number', String(issueNumber));
+
+      - name: Load issue context
+        id: load_issue
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ steps.resolve_issue.outputs.issue_number }}
+        with:
+          script: |
+            const supported = ['backend', 'infra', 'docs', 'tests'];
+            const issueNumber = Number(process.env.ISSUE_NUMBER);
+
+            const response = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+            });
+
+            const issue = response.data;
+            const labels = (issue.labels || []).map((label) => String(label.name || '').toLowerCase());
+            const executionClass = supported.find((label) => labels.includes(label)) || '';
+
+            core.setOutput('issue_title', issue.title || '');
+            core.setOutput('issue_body', issue.body || '');
+            core.setOutput('issue_url', issue.html_url || '');
+            core.setOutput('labels_json', JSON.stringify(labels));
+            core.setOutput('execution_class', executionClass);
+
+      - name: Router debug
+        run: |
+          echo "Router triggered"
+          echo "Event: ${{ github.event_name }}"
+          echo "Issue number: ${{ steps.resolve_issue.outputs.issue_number }}"
+          echo "Execution class: ${{ steps.load_issue.outputs.execution_class }}"
+
+      - name: Verify issue exists
+        if: steps.resolve_issue.outputs.issue_number != ''
+        run: echo "Routing issue ${{ steps.resolve_issue.outputs.issue_number }}"
+
+      - name: Dispatch Codex worker
+        if: steps.resolve_issue.outputs.issue_number != '' && steps.load_issue.outputs.execution_class != ''
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ steps.resolve_issue.outputs.issue_number }}
+          ISSUE_TITLE: ${{ steps.load_issue.outputs.issue_title }}
+          ISSUE_BODY: ${{ steps.load_issue.outputs.issue_body }}
+          ISSUE_URL: ${{ steps.load_issue.outputs.issue_url }}
+          EXECUTION_CLASS: ${{ steps.load_issue.outputs.execution_class }}
+          LABELS_JSON: ${{ steps.load_issue.outputs.labels_json }}
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'codex_worker.yml',
+              ref: context.payload.repository?.default_branch || context.payload.workflow_run?.head_branch || 'main',
+              inputs: {
+                issue_number: process.env.ISSUE_NUMBER,
+                issue_title: process.env.ISSUE_TITLE,
+                issue_body: process.env.ISSUE_BODY,
+                issue_labels: process.env.LABELS_JSON,
+                execution_class: process.env.EXECUTION_CLASS,
+                issue_url: process.env.ISSUE_URL,
+              },
+            });

@@ -1,0 +1,45 @@
+name: Backend task
+about: Route backend work into the GitHub-native autonomy pipeline
+labels:
+  - backend
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What backend outcome is required?
+      placeholder: Establish or modify a backend behavior, doc, or control-plane task.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What repo area is in scope?
+      placeholder: docs/, azure/functions/, supabase/, .github/workflows/
+    validations:
+      required: true
+  - type: textarea
+    id: target_files
+    attributes:
+      label: Target files
+      description: List expected files or directories if known.
+      placeholder: docs/architecture/ROUTE_MAP_V1.md
+    validations:
+      required: false
+  - type: textarea
+    id: proof_expectations
+    attributes:
+      label: Proof expectations
+      description: What proof must appear on the PR?
+      placeholder: changed files, sample request/response, proof artifacts, doc diff
+    validations:
+      required: true
+  - type: textarea
+    id: risk_notes
+    attributes:
+      label: Risk notes
+      description: What must not be changed or what needs extra caution?
+      placeholder: Do not change deploy targets, runtime secrets, or production handlers.
+    validations:
+      required: true

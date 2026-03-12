@@ -1,0 +1,37 @@
+name: Infra task
+about: Route infrastructure, workflow, or governance work into the autonomy pipeline
+labels:
+  - infra
+body:
+  - type: textarea
+    id: infrastructure_target
+    attributes:
+      label: Infrastructure target
+      description: What workflow, config surface, or supporting system is affected?
+      placeholder: .github/workflows/proof_gate.yml, docs/autonomy/, CI label bootstrap
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Workflow/docs/config scope
+      description: What files or directories are in scope?
+      placeholder: .github/workflows/, .github/ISSUE_TEMPLATE/, docs/autonomy/
+    validations:
+      required: true
+  - type: textarea
+    id: proof_expectations
+    attributes:
+      label: Proof expectations
+      description: What workflow run, artifact, or diff should prove success?
+      placeholder: workflow run link, proof artifact, issue comment, PR link
+    validations:
+      required: true
+  - type: textarea
+    id: rollback_safety
+    attributes:
+      label: Rollback / safety note
+      description: How should this be kept safe or backed out if needed?
+      placeholder: Additive workflow/doc changes only. No deploy target or secret modifications.
+    validations:
+      required: true
