@@ -1,6 +1,6 @@
 name: create-autonomy-test-issue
 
-"on":
+on:
   workflow_dispatch:
 
 permissions:
@@ -17,40 +17,31 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: 'AUTONOMY-TEST-01 — Validate Backend Router -> Worker -> PR -> Proof Chain',
-              body: `Objective
-
-Validate the GitHub-native backend autonomy control plane.
-
-Execution chain to verify:
-
-Issue
--> task_router
--> codex_worker
--> branch
--> PR
--> proof_gate
-
-Required Work
-
-Add a section titled "Autonomy Validation Run" to:
-
-docs/autonomy/AUTONOMY_EXECUTION_MODEL_V1.md
-
-Content should state that this issue verified the backend autonomy execution pipeline.
-
-Constraints
-
-* Documentation change only
-* No workflow edits
-* No deploy target changes
-* No secret changes
-* Keep changes repo-grounded
-
-Proof expectations
-
-* issue comment with branch and PR
-* proof gate artifact output on the resulting PR
-`,
-              labels: ['backend'],
+              title: "AUTONOMY-TEST-01 — Validate Router → Worker → PR → Proof Chain",
+              body: [
+                "Objective",
+                "",
+                "Validate the GitHub-native autonomy control plane.",
+                "",
+                "Execution chain to verify:",
+                "",
+                "Issue",
+                "→ task_router",
+                "→ codex_worker",
+                "→ branch",
+                "→ PR",
+                "→ proof_gate",
+                "",
+                "Required Work",
+                "",
+                "Add a short section titled 'Autonomy Validation Run' to docs/autonomy/AUTONOMY_EXECUTION_MODEL_V1.md.",
+                "",
+                "Constraints",
+                "",
+                "- Documentation change only",
+                "- No workflow edits",
+                "- No deploy target changes",
+                "- No secret changes"
+              ].join("\n"),
+              labels: ["backend"]
             });
