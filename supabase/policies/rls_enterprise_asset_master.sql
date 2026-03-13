@@ -1,8 +1,12 @@
-alter table public.assets enable row level security;
-alter table public.asset_data_raw enable row level security;
-alter table public.asset_specs_reconciled enable row level security;
-
-create policy "assets_org_isolation"
-on public.assets
-for all
-using (organization_id = current_setting('request.jwt.claim.organization_id', true)::uuid);
+-- Legacy reference only.
+--
+-- Active canonical policy baseline for public.assets is the helper-function policy suite
+-- proven in staging and defined in supabase/migrations/0002_altus_core_identity.sql:
+--   assets_select
+--   assets_insert
+--   assets_update
+--   assets_delete
+--
+-- The standalone assets_org_isolation policy below is intentionally not authoritative for
+-- current repo truth until a separate policy reconciliation task decides whether it should
+-- be restored, migrated, or removed.

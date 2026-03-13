@@ -64,11 +64,12 @@ Current role:
 Sources:
 - `supabase/migrations/0001_enterprise_asset_master.sql`
 - `supabase/migrations/0002_altus_core_identity.sql`
+- `supabase/migrations/0004_reconcile_assets_asset_data_raw_canonical_baseline.sql`
 
 Repo truth notes:
 - `0001` and `0002` define different shapes for `public.assets`.
-- Because both use `create table if not exists`, the final live shape depends on historical apply order and any later manual/schema edits.
-- Repo evidence proves the table exists conceptually, but does not fully prove one canonical column set from migrations alone.
+- `0004` is the forward reconciliation migration that aligns repo truth toward the approved staging-canonical baseline for the decided object area.
+- Repository truth now treats `display_name` as the canonical presentation field for future applies while leaving legacy `name` untouched until a later cleanup decision.
 
 Columns provable somewhere in repo migrations:
 - `id`
@@ -78,12 +79,12 @@ Columns provable somewhere in repo migrations:
 - `clip`
 - `asset_type`
 - `name`
+- `display_name`
 - `status`
 - `created_at`
 - `updated_at`
 
-Columns expected by current runtime code but not proven by migrations on `main`:
-- `display_name`
+Columns still expected by runtime code but not proven by migrations on this branch:
 - `external_ids`
 
 Current role:
@@ -94,10 +95,12 @@ Current role:
 Sources:
 - `supabase/migrations/0001_enterprise_asset_master.sql`
 - `supabase/migrations/0002_altus_core_identity.sql`
+- `supabase/migrations/0004_reconcile_assets_asset_data_raw_canonical_baseline.sql`
 
 Repo truth notes:
 - `0001` and `0002` define different shapes for `public.asset_data_raw`.
-- Repo evidence proves the table exists conceptually, but not one fully canonical final column set.
+- `0004` is the forward reconciliation migration that aligns repo truth toward the approved staging-canonical `payload_jsonb` / `fetched_at` baseline for future applies.
+- This branch intentionally does not resolve runtime-only `payload_sha256` or `source_record_id`.
 
 Columns provable somewhere in repo migrations:
 - `id`
@@ -109,7 +112,17 @@ Columns provable somewhere in repo migrations:
 - `fetched_at`
 - `created_at`
 
-Columns expected by current runtime code but not proven by migrations on `main`:
+Canonical columns for the approved baseline on this branch:
+- `id`
+- `asset_id`
+- `source`
+- `payload_jsonb`
+- `fetched_at`
+
+Unresolved / intentionally not normalized in this branch:
+- `organization_id`
+- `payload`
+- `created_at`
 - `payload_sha256`
 - `source_record_id`
 
@@ -125,6 +138,7 @@ Sources:
 Repo truth notes:
 - `0001` and `0002` define different shapes for `public.asset_specs_reconciled`.
 - Repo evidence proves the table exists conceptually, but not one fully canonical final column set.
+- Extra live staging columns remain intentionally out-of-scope on this branch.
 
 Columns provable somewhere in repo migrations:
 - `asset_id`
@@ -213,34 +227,25 @@ Tables:
 - `public.asset_data_raw`
 - `public.asset_specs_reconciled`
 
-### Policy objects from `0002_altus_core_identity.sql`
+### Active canonical `public.assets` policy baseline on this branch
 
-- `org_select`
-- `profiles_select_self`
-- `profiles_update_self`
-- `org_members_select`
+Source:
+- `supabase/migrations/0002_altus_core_identity.sql`
+
+Policies:
 - `assets_select`
 - `assets_insert`
 - `assets_update`
 - `assets_delete`
-- `adr_select`
-- `adr_insert`
-- `adr_update`
-- `adr_delete`
-- `asr_select`
-- `asr_insert`
-- `asr_update`
-- `asr_delete`
 
-### Additional repo policy SQL
+### Legacy non-authoritative policy reference
 
 Source:
 - `supabase/policies/rls_enterprise_asset_master.sql`
 
 Repo truth notes:
-- This file enables RLS on `assets`, `asset_data_raw`, and `asset_specs_reconciled` and creates policy `assets_org_isolation` only on `public.assets`.
-- The policy uses `request.jwt.claim.organization_id`, which differs from the helper-function approach in `0002`.
-- Repo evidence does not prove whether this policy file is currently applied in staging or whether it supersedes or coexists with the migration-defined policies.
+- This file is now explicitly documented as a legacy, non-authoritative reference.
+- Policy `assets_org_isolation` is intentionally not treated as active canonical repo truth on this branch.
 
 ## Authoritative Surface Mapping
 
@@ -256,8 +261,8 @@ Supporting objects:
 - `public.altus_is_org_member(uuid)`
 
 Repo/code gap notes:
-- `function_app.py` writes `display_name` and `external_ids` to `assets`, and `payload_sha256` plus `source_record_id` to `asset_data_raw`.
-- Those fields are not proven by repo migrations on `main`.
+- this branch reconciles repo truth toward `assets.display_name` and the `asset_data_raw.payload_jsonb` / `fetched_at` baseline
+- `external_ids`, `payload_sha256`, and `source_record_id` remain intentionally unresolved
 
 ### ECC portfolio summary surfaces
 
@@ -275,7 +280,7 @@ Repo-proven authoritative DB objects:
 Grounding notes:
 - `DATA_MAP_V1` maps search to `assets`.
 - `ecc_asset_search_service.py` is currently deterministic stub logic and does not prove live DB reads.
-- `display_name` and `address_canonical` are referenced in `DATA_MAP_V1`, but only `address_canonical` is proven by repo migrations on `main`.
+- `display_name` is now part of the reconciled repo baseline on this branch.
 
 ### Asset metrics
 
@@ -298,11 +303,10 @@ Grounding notes:
 
 ## Unknowns / Gaps
 
-- The final live staging column sets for `assets`, `asset_data_raw`, and `asset_specs_reconciled` are not fully provable from migrations alone because `0001` and `0002` define different table shapes.
-- `docs/architecture/DATA_MAP_V1.md` references `asset_links`, but no repo migration on `main` proves that table exists.
-- `docs/contracts/README.md` currently references `docs/contracts/ASSET_SURFACE_CONTRACTS_V1.md`, but that file is not present on `main`.
-- No repo migration on `main` proves any critical view for ECC or price-engine persistence.
-- No safe staging inspection output is committed yet for this inventory; this document is repository-grounded first.
+- `asset_links` remains unproven by repo migrations on this branch.
+- `external_ids` remains unproven by repo migrations on this branch.
+- `payload_sha256` and `source_record_id` remain unresolved runtime-only expectations.
+- No repo migration on this branch proves any critical view for ECC or price-engine persistence.
 
 ## Staging Reconciliation Proof (2026-03-13)
 
@@ -326,12 +330,10 @@ Objects still unknown after staging proof:
 - `asset_links` remains unknown because this proof run did not query for that table or any related policies
 - no critical views were queried because none are proven by repository migrations on `main`
 - no price-engine persistence object is proven by repository artifacts or this staging proof run
+
 ## Recommended Follow-on DB Tasks
 
-
-1. Reconcile migration truth for `assets`, `asset_data_raw`, and `asset_specs_reconciled` into one unambiguous canonical schema path.
-2. Either add repo truth for `asset_links` and the runtime-expected columns, or remove those references from contracts and data maps until proven.
+1. Run the focused verification file `supabase/verification/0003_canonical_baseline_assertions.sql` after this branch merges so the reconciled repo baseline is re-proven against staging.
+2. Either add repo truth for `asset_links` and the runtime-expected unresolved columns, or remove those references from contracts and data maps until proven.
 3. Define whether ECC and price-engine surfaces will remain stub-only or receive explicit persistence contracts.
-4. Add a follow-on staging verification that queries `asset_links` explicitly so link-relationship truth is no longer unknown.
-
-
+4. Open separate proof or contract work for `asset_specs_reconciled` extra live columns and `external_ids` semantics.
