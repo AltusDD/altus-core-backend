@@ -1,0 +1,14 @@
+{
+  "data": {
+    "portfolioId": "portfolio-001",
+    "asOfDate": "2026-03-13",
+    "assetCount": 13,
+    "occupiedUnits": 48,
+    "totalUnits": 52,
+    "occupancyRate": 0.9230769230769231,
+    "estimatedValue": 1625000.0,
+    "currency": "USD",
+    "activeAlerts": 0,
+    "status": "stub_ready"
+  }
+}

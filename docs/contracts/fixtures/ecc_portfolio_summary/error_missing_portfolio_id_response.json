@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "portfolioId is required"
+  }
+}
