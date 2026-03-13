@@ -303,7 +303,7 @@ Grounding notes:
 
 ## Unknowns / Gaps
 
-- `asset_links` remains unproven by repo migrations on this branch.
+- `asset_links` is not proven by repo migrations on `main`, and staging proof run `23066495260` confirmed `public.asset_links` is not present in staging.
 - `external_ids` remains unproven by repo migrations on this branch.
 - `payload_sha256` and `source_record_id` remain unresolved runtime-only expectations.
 - No repo migration on this branch proves any critical view for ECC or price-engine persistence.
@@ -326,14 +326,29 @@ Confirmed mismatches from staging proof:
 - staging `public.asset_specs_reconciled` includes a broader shape than either single migration alone proves, including `organization_id`, `spec_version`, `id`, `specs`, `provenance`, `effective_at`, and `created_at`
 - staging proof did not show policy `assets_org_isolation`, so the standalone policy file under `supabase/policies/` is not currently proven as active in staging
 
+## Asset Links Discovery Proof (2026-03-13)
+
+Proof source:
+- `supabase_apply.yml` staging run `23066495260`
+- verification file: `supabase/verification/0004_asset_links_discovery.sql`
+
+Confirmed results:
+- `public.asset_links` is not present in staging
+- no columns, constraints, indexes, or policies were returned for `public.asset_links`
+- `asset_data_raw` contains `2` proven fallback link evidence rows for `ASSET_LINK::` / `ASSET_LINK_DELETE::` and `record_type` values `asset_link` / `asset_link_delete`
+- current canonical link authority is therefore `asset_data_raw` fallback evidence, not a dedicated `asset_links` table
+
+Decision note:
+- introducing `asset_links` now would require a future explicit schema proposal rather than a documentation-only normalization pass
+
 Objects still unknown after staging proof:
-- `asset_links` remains unknown because this proof run did not query for that table or any related policies
+- `asset_links` no longer remains unknown: staging proof run `23066495260` confirmed the table is absent, exposed no columns, constraints, indexes, or policies, and showed `asset_data_raw` fallback link evidence remains the only proven link authority
 - no critical views were queried because none are proven by repository migrations on `main`
 - no price-engine persistence object is proven by repository artifacts or this staging proof run
 
 ## Recommended Follow-on DB Tasks
 
 1. Run the focused verification file `supabase/verification/0003_canonical_baseline_assertions.sql` after this branch merges so the reconciled repo baseline is re-proven against staging.
-2. Either add repo truth for `asset_links` and the runtime-expected unresolved columns, or remove those references from contracts and data maps until proven.
+2. Treat `asset_data_raw` fallback evidence as the canonical link authority until a future explicit schema proposal decides whether `asset_links` should be introduced as a governed table.
 3. Define whether ECC and price-engine surfaces will remain stub-only or receive explicit persistence contracts.
 4. Open separate proof or contract work for `asset_specs_reconciled` extra live columns and `external_ids` semantics.

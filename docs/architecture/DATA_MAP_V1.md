@@ -14,7 +14,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 
 - `public.assets`, `public.asset_data_raw`, and `public.asset_specs_reconciled` were each defined more than once in historical migrations, so canonical repo truth must follow the latest approved reconciliation layer rather than the oldest definition.
 - `supabase/migrations/0004_reconcile_assets_asset_data_raw_canonical_baseline.sql` is the current reconciliation layer for the decided `assets` and `asset_data_raw` mismatch areas.
-- `asset_links` is referenced below as a preferred fast-path relationship table, but no migration on this branch currently proves that table exists.
+- `asset_links` is referenced below as a potential future fast-path relationship table, but staging proof run `23066495260` confirmed it is not present in staging and no migration on `main` currently proves it exists.
 - `external_ids`, `payload_sha256`, and `source_record_id` remain intentionally unresolved on this branch.
 - Staging proof run `23061749612` confirmed `assets.display_name` exists, confirmed `asset_data_raw` follows the `payload_jsonb` / `fetched_at` shape, and did not prove policy `assets_org_isolation` as active.
 
@@ -22,7 +22,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 
 - `assets` is canonical for current asset state (`status`, identity fields, timestamps), with `display_name` as the current reconciled presentation field.
 - `asset_data_raw` is canonical event/evidence stream for ingest/audit/timeline and for fallback link/lifecycle evidence, using the reconciled `payload_jsonb` / `fetched_at` baseline.
-- `asset_links` is optional fast-path table when present; repository proof for that table is currently absent on this branch, so fallback authority remains `asset_data_raw` evidence.
+- `asset_links` is not part of the current canonical staging baseline; `asset_data_raw` fallback evidence is the authoritative link source until a future explicit schema proposal introduces a governed link table.
 
 ## Endpoint to Source-of-Truth Mapping
 
@@ -30,17 +30,17 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 |---|---|---|---|
 | `GET /api/assets` | `assets` | none | Current reconciled baseline treats `display_name` as the authoritative presentation field and leaves legacy `name` non-canonical. |
 | `GET /api/assets/search` | `assets` | none | Intended search fields include `display_name` and `address_canonical`; `display_name` is now part of the reconciled repo baseline on this branch. |
-| `GET /api/assets/{id}` | `assets` + `asset_data_raw` + links | `asset_data_raw` for links | Detail hydration intent remains authoritative; `asset_links` remains unproven in repo migrations on this branch. |
+| `GET /api/assets/{id}` | `assets` + `asset_data_raw` + link evidence | `asset_data_raw` for links | Detail hydration intent remains authoritative; staging proof confirmed `asset_links` is absent, so link authority currently comes from `asset_data_raw` evidence only. |
 | `GET /api/assets/{id}/raw` | `asset_data_raw` | none | Current reconciled baseline is `payload_jsonb` + `fetched_at`. |
 | `GET /api/assets/{id}/timeline` | `asset_data_raw` | none | Event type normalization from row source/payload. |
-| `GET /api/assets/{id}/snapshot` | `assets` + links + `asset_data_raw` | `asset_data_raw` links | Snapshot combines current state + relationship view; `asset_links` remains a repo gap on this branch. |
+| `GET /api/assets/{id}/snapshot` | `assets` + link evidence + `asset_data_raw` | `asset_data_raw` links | Snapshot combines current state + relationship view; staging proof confirmed `asset_links` is absent, so link authority currently comes from `asset_data_raw` evidence only. |
 | `GET /api/assets/{id}/audit` | `asset_data_raw` | none | Recognized event families normalized in handler. |
 | `POST /api/assets/match` | `assets` | none | Candidate selection in org scope. |
 | `POST /api/assets/resolve` | `assets` (+ insert on create path) | none | Accepted live resolve surface with matched/created semantics. |
 | `POST /api/assets/bulk-resolve` | `assets` (+ insert) | none | Per-row match or create semantics. |
 | `POST /api/assets/upsert` | `assets` (+ optional raw evidence) | none | Creates/updates state row. |
-| `POST /api/assets/link` | `asset_links` when present | `asset_data_raw` (`ASSET_LINK::`) | Fallback evidence row emitted when link table is unavailable or unproven. |
-| `DELETE /api/assets/link` | `asset_links` when present | `asset_data_raw` (`ASSET_LINK_DELETE::`) | Fallback delete evidence row. |
+| `POST /api/assets/link` | `asset_data_raw` (`ASSET_LINK::`) | none | Staging proof confirmed `asset_links` is absent, so link creation authority currently lands in fallback evidence rows only. |
+| `DELETE /api/assets/link` | `asset_data_raw` (`ASSET_LINK_DELETE::`) | none | Staging proof confirmed `asset_links` is absent, so link delete authority currently lands in fallback evidence rows only. |
 | `POST /api/assets/{id}/archive` | `assets` status update | `asset_data_raw` evidence | Emits lifecycle evidence `ASSET_ARCHIVE::...`. |
 | `POST /api/assets/{id}/restore` | `assets` status update | `asset_data_raw` evidence | Emits lifecycle evidence `ASSET_RESTORE::...`. |
 | `DELETE /api/assets/{id}` | `assets` delete/soft-delete path | `asset_data_raw` evidence | Emits delete evidence where implemented. |
@@ -53,7 +53,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 
 ### Link Relationship Evidence
 
-- Preferred when proven and present: `asset_links` table.
+- Current canonical authority: `asset_data_raw` evidence because staging proof run `23066495260` confirmed `asset_links` is absent.
 - Fallback truth: `asset_data_raw` rows where:
   - create evidence: `source` prefixed `ASSET_LINK::` or `payload_jsonb.record_type == "asset_link"`
   - delete evidence: `source` prefixed `ASSET_LINK_DELETE::` or `payload_jsonb.record_type == "asset_link_delete"`
