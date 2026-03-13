@@ -1,0 +1,36 @@
+{
+  "data": [
+    {
+      "assetId": "portfolio-001-asset-002",
+      "portfolioId": "portfolio-001",
+      "displayName": "Portfolio Asset 2",
+      "assetType": "multifamily",
+      "status": "stub_ready",
+      "occupiedUnits": 7,
+      "totalUnits": 9,
+      "occupancyRate": 0.7777777777777778,
+      "marketValue": 200000.0,
+      "city": null,
+      "state": null
+    },
+    {
+      "assetId": "portfolio-001-asset-003",
+      "portfolioId": "portfolio-001",
+      "displayName": "Portfolio Asset 3",
+      "assetType": "multifamily",
+      "status": "stub_ready",
+      "occupiedUnits": 10,
+      "totalUnits": 10,
+      "occupancyRate": 1.0,
+      "marketValue": 300000.0,
+      "city": null,
+      "state": null
+    }
+  ],
+  "meta": {
+    "portfolioId": "portfolio-001",
+    "limit": 2,
+    "offset": 1,
+    "total": 13
+  }
+}

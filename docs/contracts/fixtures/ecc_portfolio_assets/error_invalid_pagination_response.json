@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "limit must be 1..100 and offset must be >= 0"
+  }
+}
