@@ -1,0 +1,27 @@
+{
+  "data": {
+    "status": "operational",
+    "generatedAt": null,
+    "components": [
+      {
+        "name": "assetIndex",
+        "status": "operational",
+        "latencyMs": 42,
+        "details": null
+      },
+      {
+        "name": "portfolioCache",
+        "status": "operational",
+        "latencyMs": 18,
+        "details": null
+      },
+      {
+        "name": "priceEngine",
+        "status": "degraded",
+        "latencyMs": 64,
+        "details": null
+      }
+    ],
+    "activeIncidents": 1
+  }
+}

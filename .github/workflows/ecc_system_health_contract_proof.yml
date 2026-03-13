@@ -1,0 +1,43 @@
+name: ecc_system_health_contract_proof
+
+on:
+  pull_request:
+    paths:
+      - "tests/contracts/test_ecc_system_health_contract.py"
+      - "docs/contracts/ECC_SYSTEM_HEALTH_CONTRACT_V1.md"
+      - "docs/contracts/fixtures/ecc_system_health/**"
+      - "azure/functions/asset_ingest/ecc_system_health_handler.py"
+      - "azure/functions/asset_ingest/ecc_system_health_service.py"
+      - ".github/workflows/ecc_system_health_contract_proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ecc-system-health-contract-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run ECC system health contract proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/contracts -p 'test_ecc_system_health_contract.py' -v
+
+      - name: Write contract proof summary
+        shell: bash
+        run: |
+          {
+            echo "ECC SYSTEM HEALTH CONTRACT PROOF"
+            echo "- test module: tests/contracts/test_ecc_system_health_contract.py"
+            echo "- result: pass"
+            echo "- scope: GET /api/ecc/system/health"
+          } >> "$GITHUB_STEP_SUMMARY"
