@@ -1,0 +1,34 @@
+{
+  "data": [
+    {
+      "assetId": "search-asset-002",
+      "displayName": "Search Match 2",
+      "address": "101 Market Street",
+      "match": {
+        "strategy": "name_similarity",
+        "score": 0.68
+      },
+      "portfolioId": null,
+      "city": null,
+      "state": null
+    },
+    {
+      "assetId": "search-asset-003",
+      "displayName": "Search Match 3",
+      "address": "102 Market Street",
+      "match": {
+        "strategy": "name_similarity",
+        "score": 0.68
+      },
+      "portfolioId": null,
+      "city": null,
+      "state": null
+    }
+  ],
+  "meta": {
+    "query": "market",
+    "limit": 2,
+    "offset": 1,
+    "total": 8
+  }
+}
