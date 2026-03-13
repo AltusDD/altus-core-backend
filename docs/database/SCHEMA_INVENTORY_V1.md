@@ -304,9 +304,34 @@ Grounding notes:
 - No repo migration on `main` proves any critical view for ECC or price-engine persistence.
 - No safe staging inspection output is committed yet for this inventory; this document is repository-grounded first.
 
+## Staging Reconciliation Proof (2026-03-13)
+
+Proof source:
+- `supabase_apply.yml` staging run `23061749612`
+- verification file: `supabase/verification/0001_schema_inventory_assertions.sql`
+
+Confirmed matches from staging proof:
+- tables present: `public.organizations`, `public.profiles`, `public.organization_members`, `public.assets`, `public.asset_data_raw`, `public.asset_specs_reconciled`
+- functions present: `public._touch_updated_at()`, `public.altus_current_org_id()`, `public.altus_is_org_member(uuid)`, `public.altus_login(text)`, `public.altus_me()`, `public.altus_logout()`
+- policy objects present: `org_select`, `profiles_select_self`, `profiles_update_self`, `org_members_select`, `assets_select`, `assets_insert`, `assets_update`, `assets_delete`, `adr_select`, `adr_insert`, `adr_update`, `adr_delete`, `asr_select`, `asr_insert`, `asr_update`, `asr_delete`
+- staging `public.assets` includes `display_name` and `external_ids`, which current runtime code expects even though those columns are not proven by repository migrations on `main`
+
+Confirmed mismatches from staging proof:
+- staging `public.asset_data_raw` exposes `id`, `asset_id`, `source`, `payload_jsonb`, and `fetched_at`, but does not expose the `0002`-era `organization_id`, `payload`, or `created_at` fields that repository migrations also describe
+- staging does not expose runtime-expected `asset_data_raw.payload_sha256` or `asset_data_raw.source_record_id`
+- staging `public.asset_specs_reconciled` includes a broader shape than either single migration alone proves, including `organization_id`, `spec_version`, `id`, `specs`, `provenance`, `effective_at`, and `created_at`
+- staging proof did not show policy `assets_org_isolation`, so the standalone policy file under `supabase/policies/` is not currently proven as active in staging
+
+Objects still unknown after staging proof:
+- `asset_links` remains unknown because this proof run did not query for that table or any related policies
+- no critical views were queried because none are proven by repository migrations on `main`
+- no price-engine persistence object is proven by repository artifacts or this staging proof run
 ## Recommended Follow-on DB Tasks
 
-1. Add a non-destructive schema inventory verification run for staging and capture results in PR proof.
-2. Reconcile migration truth for `assets`, `asset_data_raw`, and `asset_specs_reconciled` into one unambiguous canonical schema path.
-3. Either add repo truth for `asset_links` and the runtime-expected columns, or remove those references from contracts and data maps until proven.
-4. Define whether ECC and price-engine surfaces will remain stub-only or receive explicit persistence contracts.
+
+1. Reconcile migration truth for `assets`, `asset_data_raw`, and `asset_specs_reconciled` into one unambiguous canonical schema path.
+2. Either add repo truth for `asset_links` and the runtime-expected columns, or remove those references from contracts and data maps until proven.
+3. Define whether ECC and price-engine surfaces will remain stub-only or receive explicit persistence contracts.
+4. Add a follow-on staging verification that queries `asset_links` explicitly so link-relationship truth is no longer unknown.
+
+

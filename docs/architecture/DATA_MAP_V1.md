@@ -16,6 +16,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 - `asset_links` is referenced below as a preferred fast-path relationship table, but no migration on `main` currently proves that table exists.
 - `display_name`, `external_ids`, `payload_sha256`, and `source_record_id` are expected by current runtime code, but are not yet proven by repo migrations on `main`.
 - `docs/database/SCHEMA_INVENTORY_V1.md` is the authoritative place to distinguish repo-proven schema from code expectations and unknowns.
+- Staging proof run `23061749612` confirmed `assets.display_name` and `assets.external_ids` exist in staging, confirmed `asset_data_raw` still follows the older `payload_jsonb` / `fetched_at` shape there, and did not prove policy `assets_org_isolation` as active.
 
 ## Persistence Authority
 
@@ -73,3 +74,4 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 - Archive evidence source prefix: `ASSET_ARCHIVE::`
 - Restore evidence source prefix: `ASSET_RESTORE::`
 - Delete evidence source prefix: `ASSET_DELETE::`
+
