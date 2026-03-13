@@ -1,0 +1,56 @@
+name: db_proof_gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/verification/**"
+      - ".github/workflows/supabase_apply.yml"
+      - ".github/workflows/db_proof_gate.yml"
+      - ".github/ISSUE_TEMPLATE/supabase-task.yml"
+      - ".github/ISSUE_TEMPLATE/database-task.yml"
+      - ".github/pull_request_template.md"
+      - "docs/database/**"
+      - "docs/contracts/**"
+      - "docs/governance/GATES_V1.md"
+      - "docs/governance/DEPLOYMENT_SOP_V1.md"
+      - "docs/architecture/DATA_MAP_V1.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  db-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run DB proof guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _db_proof
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python3 tools/db_proof_guard.py \
+              --event-path "${GITHUB_EVENT_PATH}" \
+              --base-sha "${{ github.event.pull_request.base.sha }}" \
+              --head-sha "${{ github.event.pull_request.head.sha }}" \
+              --proof-dir "_db_proof" | tee "_db_proof/db_proof_gate.txt"
+          else
+            python3 tools/db_proof_guard.py \
+              --proof-dir "_db_proof" | tee "_db_proof/db_proof_gate.txt"
+          fi
+
+      - name: Upload DB proof evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-proof-gate-${{ github.run_id }}
+          path: _db_proof
+          if-no-files-found: error

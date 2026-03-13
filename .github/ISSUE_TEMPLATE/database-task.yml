@@ -1,0 +1,114 @@
+name: Database Task
+description: Queue a DB task using the shared, database-agnostic autonomy contract.
+title: "[DB] "
+labels:
+  - lane:be-core
+  - status:queued
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this issue for governed database work. Supabase is first-class today, but this template also reserves additive paths for future engines.
+  - type: dropdown
+    id: target_environment
+    attributes:
+      label: Target environment
+      options:
+        - staging
+        - production
+        - both
+        - docs-only / no apply
+    validations:
+      required: true
+  - type: dropdown
+    id: database_type
+    attributes:
+      label: Database type
+      options:
+        - supabase-postgres
+        - postgres
+        - sqlserver
+        - mysql
+        - warehouse
+        - other
+    validations:
+      required: true
+  - type: input
+    id: target_project_ref
+    attributes:
+      label: Target project/ref
+      description: Project ref, cluster name, or environment alias. Never place secrets here.
+      placeholder: app-staging / warehouse-dev / project-ref
+    validations:
+      required: true
+  - type: textarea
+    id: affected_objects
+    attributes:
+      label: Affected tables/views/functions/policies
+      placeholder: |
+        - schema.table_name
+        - schema.view_name
+        - schema.function_name(...)
+    validations:
+      required: true
+  - type: dropdown
+    id: migration_required
+    attributes:
+      label: Migration required?
+      options:
+        - "yes"
+        - "no"
+    validations:
+      required: true
+  - type: dropdown
+    id: verification_query_required
+    attributes:
+      label: Verification query required?
+      options:
+        - "yes"
+        - "no"
+    validations:
+      required: true
+  - type: textarea
+    id: rollback_note
+    attributes:
+      label: Rollback note
+      placeholder: Describe reversal steps, blast radius, and any manual operator actions.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk_class
+    attributes:
+      label: Risk class
+      options:
+        - low
+        - moderate
+        - high
+    validations:
+      required: true
+  - type: dropdown
+    id: contract_update_required
+    attributes:
+      label: Contract/doc update required?
+      options:
+        - "yes"
+        - "no"
+    validations:
+      required: true
+  - type: textarea
+    id: engine_extension_notes
+    attributes:
+      label: Engine-specific notes
+      description: Optional. Use for future engines without changing the shared control model.
+      placeholder: Connection runner, dialect edge cases, or warehouse-specific verification notes.
+    validations:
+      required: false
+  - type: textarea
+    id: unknowns
+    attributes:
+      label: Unknowns / assumptions
+      placeholder: |
+        - Existing live schema not yet validated
+        - Warehouse apply path still future scope
+    validations:
+      required: true

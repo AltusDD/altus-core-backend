@@ -1,0 +1,191 @@
+name: supabase_apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Apply target
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      verification_glob:
+        description: Verification SQL glob
+        required: false
+        default: supabase/verification/*.sql
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-apply-${{ github.ref }}-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Resolve target secrets
+        id: resolve
+        shell: bash
+        env:
+          INPUT_TARGET: ${{ inputs.target }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_STAGING_PROJECT_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+          SUPABASE_STAGING_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+          SUPABASE_PROD_PROJECT_REF: ${{ secrets.SUPABASE_PROD_PROJECT_REF }}
+          SUPABASE_PROD_DB_PASSWORD: ${{ secrets.SUPABASE_PROD_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          require_secret() {
+            local name="$1"
+            local value="$2"
+            if [ -z "$value" ]; then
+              echo "::error::Missing required secret: ${name}"
+              exit 1
+            fi
+          }
+
+          require_secret "SUPABASE_ACCESS_TOKEN" "${SUPABASE_ACCESS_TOKEN}"
+
+          case "${INPUT_TARGET}" in
+            staging)
+              project_ref="${SUPABASE_STAGING_PROJECT_REF}"
+              db_password="${SUPABASE_STAGING_DB_PASSWORD}"
+              ;;
+            production)
+              project_ref="${SUPABASE_PROD_PROJECT_REF}"
+              db_password="${SUPABASE_PROD_DB_PASSWORD}"
+              ;;
+            *)
+              echo "::error::Unsupported target: ${INPUT_TARGET}"
+              exit 1
+              ;;
+          esac
+
+          require_secret "project ref for ${INPUT_TARGET}" "${project_ref}"
+          require_secret "database password for ${INPUT_TARGET}" "${db_password}"
+
+          echo "::add-mask::${SUPABASE_ACCESS_TOKEN}"
+          echo "::add-mask::${db_password}"
+          echo "::add-mask::${project_ref}"
+
+          db_url="$(PROJECT_REF="${project_ref}" DB_PASSWORD="${db_password}" python3 - <<'PY'
+          import os
+          import urllib.parse
+
+          project_ref = os.environ["PROJECT_REF"]
+          password = urllib.parse.quote(os.environ["DB_PASSWORD"])
+          print(f"postgresql://postgres.{project_ref}:{password}@aws-0-us-west-2.pooler.supabase.com:5432/postgres")
+          PY
+          )"
+
+          echo "::add-mask::${db_url}"
+          echo "project_ref=${project_ref}" >> "$GITHUB_OUTPUT"
+          echo "db_url=${db_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Supabase
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          supabase login --token "${SUPABASE_ACCESS_TOKEN}"
+
+      - name: Apply repository migrations
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ steps.resolve.outputs.db_url }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -d "supabase/migrations" ]; then
+            echo "::error::supabase/migrations directory is missing"
+            exit 1
+          fi
+
+          migration_count="$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')"
+          if [ "${migration_count}" = "0" ]; then
+            echo "::error::No migration files found under supabase/migrations"
+            exit 1
+          fi
+
+          supabase db push --db-url "${SUPABASE_DB_URL}" --include-all --yes
+
+      - name: Run verification SQL
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ steps.resolve.outputs.db_url }}
+          VERIFICATION_GLOB: ${{ inputs.verification_glob }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          files=( ${VERIFICATION_GLOB} )
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No verification SQL files matched '${VERIFICATION_GLOB}'"
+            exit 1
+          fi
+
+          mkdir -p _db_proof/verification
+          for file in "${files[@]}"; do
+            name="$(basename "${file}")"
+            psql "${SUPABASE_DB_URL}" -v ON_ERROR_STOP=1 -f "${file}" > "_db_proof/verification/${name%.sql}.txt"
+          done
+
+      - name: Build proof artifact
+        shell: bash
+        env:
+          INPUT_TARGET: ${{ inputs.target }}
+          PROJECT_REF: ${{ steps.resolve.outputs.project_ref }}
+          VERIFICATION_GLOB: ${{ inputs.verification_glob }}
+        run: |
+          set -euo pipefail
+          mkdir -p _db_proof
+
+          {
+            echo "workflow=supabase_apply"
+            echo "target=${INPUT_TARGET}"
+            echo "project_ref=${PROJECT_REF}"
+            echo "verification_glob=${VERIFICATION_GLOB}"
+            echo "commit_sha=${GITHUB_SHA}"
+            echo "run_id=${GITHUB_RUN_ID}"
+          } > _db_proof/summary.txt
+
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+
+          manifest = {
+              "workflow": "supabase_apply",
+              "target": os.environ["INPUT_TARGET"],
+              "project_ref": os.environ["PROJECT_REF"],
+              "verification_glob": os.environ["VERIFICATION_GLOB"],
+              "commit_sha": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "generated_at_utc": datetime.datetime.utcnow().isoformat() + "Z",
+          }
+          with open("_db_proof/manifest.json", "w", encoding="utf-8") as handle:
+              json.dump(manifest, handle, indent=2)
+          PY
+
+      - name: Upload proof artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-apply-proof-${{ github.run_id }}
+          path: _db_proof
+          if-no-files-found: error

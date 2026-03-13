@@ -1,0 +1,116 @@
+name: Supabase DB Task
+description: Queue a governed Supabase schema, policy, verification, or rollback-note task.
+title: "[SUPABASE] "
+labels:
+  - lane:be-core
+  - agent:supabase
+  - status:queued
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this issue for Supabase-first database work that must flow through repo truth, proof-bearing PRs, and staging-first apply.
+  - type: dropdown
+    id: target_environment
+    attributes:
+      label: Target environment
+      options:
+        - staging
+        - production
+        - both
+        - docs-only / no apply
+    validations:
+      required: true
+  - type: input
+    id: database_type
+    attributes:
+      label: Database type
+      description: Keep this as `supabase-postgres` unless the task is documenting a future extension point.
+      placeholder: supabase-postgres
+    validations:
+      required: true
+  - type: input
+    id: target_project_ref
+    attributes:
+      label: Target project/ref
+      description: Project ref or secret-backed target alias. Do not paste credentials.
+      placeholder: staging project ref or alias
+    validations:
+      required: true
+  - type: textarea
+    id: affected_objects
+    attributes:
+      label: Affected tables/views/functions/policies
+      description: List every object expected to change or verify.
+      placeholder: |
+        - table public.assets
+        - function public.altus_is_org_member
+        - policy assets_select_org_scope
+    validations:
+      required: true
+  - type: dropdown
+    id: migration_required
+    attributes:
+      label: Migration required?
+      options:
+        - "yes"
+        - "no"
+    validations:
+      required: true
+  - type: dropdown
+    id: verification_query_required
+    attributes:
+      label: Verification query required?
+      options:
+        - "yes"
+        - "no"
+    validations:
+      required: true
+  - type: textarea
+    id: rollback_note
+    attributes:
+      label: Rollback note
+      description: Required even for additive changes. State how to back out or why rollback would be operational rather than SQL.
+      placeholder: Revert migration X, rerun verification Y, confirm object state Z.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk_class
+    attributes:
+      label: Risk class
+      options:
+        - low
+        - moderate
+        - high
+    validations:
+      required: true
+  - type: dropdown
+    id: contract_update_required
+    attributes:
+      label: Contract/doc update required?
+      options:
+        - "yes"
+        - "no"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - Migration file committed in supabase/migrations when schema changes are claimed
+        - Verification SQL committed in supabase/verification
+        - DATA_MAP_V1 and contract docs updated when source-of-truth changes
+        - Proof artifact attached by CI
+    validations:
+      required: true
+  - type: textarea
+    id: unknowns
+    attributes:
+      label: Unknowns / assumptions
+      description: Call out anything not yet verified. Do not invent live schema facts.
+      placeholder: |
+        - Production state not inspected yet
+        - Secret names assumed from repo governance docs
+    validations:
+      required: true
