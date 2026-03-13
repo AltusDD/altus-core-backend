@@ -12,28 +12,28 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 
 ## Current Repo-Proven Schema Caveats
 
-- `public.assets`, `public.asset_data_raw`, and `public.asset_specs_reconciled` are each defined more than once across `supabase/migrations/0001_enterprise_asset_master.sql` and `supabase/migrations/0002_altus_core_identity.sql`, so the final live column sets are not fully provable from repo migrations alone.
-- `asset_links` is referenced below as a preferred fast-path relationship table, but no migration on `main` currently proves that table exists.
-- `display_name`, `external_ids`, `payload_sha256`, and `source_record_id` are expected by current runtime code, but are not yet proven by repo migrations on `main`.
-- `docs/database/SCHEMA_INVENTORY_V1.md` is the authoritative place to distinguish repo-proven schema from code expectations and unknowns.
-- Staging proof run `23061749612` confirmed `assets.display_name` and `assets.external_ids` exist in staging, confirmed `asset_data_raw` still follows the older `payload_jsonb` / `fetched_at` shape there, and did not prove policy `assets_org_isolation` as active.
+- `public.assets`, `public.asset_data_raw`, and `public.asset_specs_reconciled` were each defined more than once in historical migrations, so canonical repo truth must follow the latest approved reconciliation layer rather than the oldest definition.
+- `supabase/migrations/0004_reconcile_assets_asset_data_raw_canonical_baseline.sql` is the current reconciliation layer for the decided `assets` and `asset_data_raw` mismatch areas.
+- `asset_links` is referenced below as a preferred fast-path relationship table, but no migration on this branch currently proves that table exists.
+- `external_ids`, `payload_sha256`, and `source_record_id` remain intentionally unresolved on this branch.
+- Staging proof run `23061749612` confirmed `assets.display_name` exists, confirmed `asset_data_raw` follows the `payload_jsonb` / `fetched_at` shape, and did not prove policy `assets_org_isolation` as active.
 
 ## Persistence Authority
 
-- `assets` is canonical for current asset state (`status`, identity fields, timestamps).
-- `asset_data_raw` is canonical event/evidence stream for ingest/audit/timeline and for fallback link/lifecycle evidence.
-- `asset_links` is optional fast-path table when present; repository proof for that table is currently absent on `main`, so fallback authority remains `asset_data_raw` evidence.
+- `assets` is canonical for current asset state (`status`, identity fields, timestamps), with `display_name` as the current reconciled presentation field.
+- `asset_data_raw` is canonical event/evidence stream for ingest/audit/timeline and for fallback link/lifecycle evidence, using the reconciled `payload_jsonb` / `fetched_at` baseline.
+- `asset_links` is optional fast-path table when present; repository proof for that table is currently absent on this branch, so fallback authority remains `asset_data_raw` evidence.
 
 ## Endpoint to Source-of-Truth Mapping
 
 | Endpoint | Primary Source | Fallback Source | Notes |
 |---|---|---|---|
-| `GET /api/assets` | `assets` | none | Current repo migrations prove `assets` exists, but not every runtime-expected column on `main`. |
-| `GET /api/assets/search` | `assets` | none | Intended search fields include `display_name` and `address_canonical`; `address_canonical` is repo-proven, `display_name` is currently code-expected but not migration-proven on `main`. |
-| `GET /api/assets/{id}` | `assets` + `asset_data_raw` + links | `asset_data_raw` for links | Detail hydration intent remains authoritative; `asset_links` remains unproven in repo migrations on `main`. |
-| `GET /api/assets/{id}/raw` | `asset_data_raw` | none | Requires asset existence in org scope first. |
+| `GET /api/assets` | `assets` | none | Current reconciled baseline treats `display_name` as the authoritative presentation field and leaves legacy `name` non-canonical. |
+| `GET /api/assets/search` | `assets` | none | Intended search fields include `display_name` and `address_canonical`; `display_name` is now part of the reconciled repo baseline on this branch. |
+| `GET /api/assets/{id}` | `assets` + `asset_data_raw` + links | `asset_data_raw` for links | Detail hydration intent remains authoritative; `asset_links` remains unproven in repo migrations on this branch. |
+| `GET /api/assets/{id}/raw` | `asset_data_raw` | none | Current reconciled baseline is `payload_jsonb` + `fetched_at`. |
 | `GET /api/assets/{id}/timeline` | `asset_data_raw` | none | Event type normalization from row source/payload. |
-| `GET /api/assets/{id}/snapshot` | `assets` + links + `asset_data_raw` | `asset_data_raw` links | Snapshot combines current state + relationship view; `asset_links` remains a repo gap on `main`. |
+| `GET /api/assets/{id}/snapshot` | `assets` + links + `asset_data_raw` | `asset_data_raw` links | Snapshot combines current state + relationship view; `asset_links` remains a repo gap on this branch. |
 | `GET /api/assets/{id}/audit` | `asset_data_raw` | none | Recognized event families normalized in handler. |
 | `POST /api/assets/match` | `assets` | none | Candidate selection in org scope. |
 | `POST /api/assets/resolve` | `assets` (+ insert on create path) | none | Accepted live resolve surface with matched/created semantics. |
@@ -47,7 +47,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 | `GET /api/assets/export` | `assets` | none | JSON/CSV export over canonical state. |
 | `GET /api/assets/overview` | `assets` + link/audit derivation | `asset_data_raw` for link/audit fallback | Summary + deterministic recent slices. |
 | `GET /api/assets/metrics` | `assets` + windowed audit/link derivation | `asset_data_raw` for link/audit fallback | Compact metrics only, no raw row payloads. |
-| `POST /api/assets/ingest` | `assets` + `asset_data_raw` | none | State row + raw source evidence write path; runtime currently expects some columns not yet proven by repo migrations on `main`. |
+| `POST /api/assets/ingest` | `assets` + `asset_data_raw` | none | Reconciled repo baseline aligns `assets.display_name` plus `asset_data_raw.payload_jsonb` / `fetched_at`; unresolved runtime-only fields remain intentionally out of scope. |
 
 ## Explicit Fallback Authority Notes
 
@@ -74,4 +74,3 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 - Archive evidence source prefix: `ASSET_ARCHIVE::`
 - Restore evidence source prefix: `ASSET_RESTORE::`
 - Delete evidence source prefix: `ASSET_DELETE::`
-
