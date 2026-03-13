@@ -1,0 +1,42 @@
+name: assets_ingest_contract_proof
+
+on:
+  pull_request:
+    paths:
+      - "tests/contracts/test_assets_ingest_contract.py"
+      - "docs/contracts/ASSETS_INGEST_CONTRACT_V1.md"
+      - "docs/contracts/fixtures/assets_ingest/**"
+      - "azure/functions/asset_ingest/function_app.py"
+      - ".github/workflows/assets_ingest_contract_proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  assets-ingest-contract-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run assets ingest contract proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/contracts -p 'test_assets_ingest_contract.py' -v
+
+      - name: Write contract proof summary
+        shell: bash
+        run: |
+          {
+            echo "ASSETS INGEST CONTRACT PROOF"
+            echo "- test module: tests/contracts/test_assets_ingest_contract.py"
+            echo "- result: pass"
+            echo "- scope: POST /api/assets/ingest"
+          } >> "$GITHUB_STEP_SUMMARY"

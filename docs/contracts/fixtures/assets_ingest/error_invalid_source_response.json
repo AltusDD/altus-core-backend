@@ -1,0 +1,4 @@
+{
+  "ok": false,
+  "error": "source must be one of CORELOGIC|MLS|DOORLOOP|MANUAL|OTHER"
+}

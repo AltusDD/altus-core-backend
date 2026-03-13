@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-altus-org-id": "11111111-1111-1111-1111-111111111111"
+  },
+  "body": {
+    "source": "MANUAL",
+    "asset": {
+      "name": "101 Main St",
+      "asset_type": "PROPERTY",
+      "status": "ACTIVE"
+    },
+    "raw": {
+      "address": "101 Main St"
+    }
+  }
+}
