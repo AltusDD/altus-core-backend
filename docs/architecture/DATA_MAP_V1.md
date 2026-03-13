@@ -15,7 +15,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 - `public.assets`, `public.asset_data_raw`, and `public.asset_specs_reconciled` were each defined more than once in historical migrations, so canonical repo truth must follow the latest approved reconciliation layer rather than the oldest definition.
 - `supabase/migrations/0004_reconcile_assets_asset_data_raw_canonical_baseline.sql` is the current reconciliation layer for the decided `assets` and `asset_data_raw` mismatch areas.
 - `asset_links` is referenced below as a potential future fast-path relationship table, but staging proof run `23066495260` confirmed it is not present in staging and no migration on `main` currently proves it exists.
-- `public.assets.external_ids` is now proven in staging as a live `jsonb` object field with default `{}` and observed `payload_hash` key usage; semantic expansion or redesign remains deferred, while `payload_sha256` and `source_record_id` remain intentionally unresolved on this branch.
+- `public.assets.external_ids` is now proven in staging as a live `jsonb` object field with default `{}` and observed `payload_hash` key usage; staging proof run `23069329492` also confirmed `public.asset_data_raw.payload_sha256` is absent and that the current proven equivalent hash representation lives in `public.assets.external_ids.payload_hash`; semantic redesign remains deferred, while `source_record_id` remains intentionally unresolved on this branch.
 - Staging proof run `23061749612` confirmed `assets.display_name` exists, confirmed `asset_data_raw` follows the `payload_jsonb` / `fetched_at` shape, and did not prove policy `assets_org_isolation` as active.
 
 ## Persistence Authority
@@ -47,7 +47,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 | `GET /api/assets/export` | `assets` | none | JSON/CSV export over canonical state. |
 | `GET /api/assets/overview` | `assets` + link/audit derivation | `asset_data_raw` for link/audit fallback | Summary + deterministic recent slices. |
 | `GET /api/assets/metrics` | `assets` + windowed audit/link derivation | `asset_data_raw` for link/audit fallback | Compact metrics only, no raw row payloads. |
-| `POST /api/assets/ingest` | `assets` + `asset_data_raw` | none | Reconciled repo baseline aligns `assets.display_name`, staging-proven `assets.external_ids` as a `jsonb` object field with default `{}`, plus `asset_data_raw.payload_jsonb` / `fetched_at`; semantic redesign of `external_ids` remains intentionally deferred. |
+| `POST /api/assets/ingest` | `assets` + `asset_data_raw` | none | Reconciled repo baseline aligns `assets.display_name`, staging-proven `assets.external_ids` as a `jsonb` object field with default `{}` and observed `payload_hash` usage, plus `asset_data_raw.payload_jsonb` / `fetched_at`; `asset_data_raw.payload_sha256` is not part of the current live staging schema and no redesign is proposed here. |
 
 ## Explicit Fallback Authority Notes
 
@@ -74,4 +74,5 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 - Archive evidence source prefix: `ASSET_ARCHIVE::`
 - Restore evidence source prefix: `ASSET_RESTORE::`
 - Delete evidence source prefix: `ASSET_DELETE::`
+
 

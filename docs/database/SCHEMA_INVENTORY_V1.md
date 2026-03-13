@@ -106,7 +106,7 @@ Sources:
 Repo truth notes:
 - `0001` and `0002` define different shapes for `public.asset_data_raw`.
 - `0004` is the forward reconciliation migration that aligns repo truth toward the approved staging-canonical `payload_jsonb` / `fetched_at` baseline for future applies.
-- This branch intentionally does not resolve runtime-only `payload_sha256` or `source_record_id`.
+- This branch intentionally does not resolve runtime-only `source_record_id`, and staging proof later confirmed `payload_sha256` is absent from the live `asset_data_raw` schema.
 
 Columns provable somewhere in repo migrations:
 - `id`
@@ -129,7 +129,7 @@ Unresolved / intentionally not normalized in this branch:
 - `organization_id`
 - `payload`
 - `created_at`
-- `payload_sha256`
+- `payload_sha256` (runtime expectation only; proven absent in staging, with current equivalent hash representation observed in `public.assets.external_ids.payload_hash`)
 - `source_record_id`
 
 Current role:
@@ -268,7 +268,7 @@ Supporting objects:
 
 Repo/code gap notes:
 - this branch reconciles repo truth toward `assets.display_name` and the `asset_data_raw.payload_jsonb` / `fetched_at` baseline
-- `external_ids` is proven live in staging as a `jsonb` object field with default `{}` and observed `payload_hash` key usage, but semantic expansion or redesign remains intentionally deferred; `payload_sha256` and `source_record_id` remain intentionally unresolved
+- `external_ids` is proven live in staging as a `jsonb` object field with default `{}` and observed `payload_hash` key usage; `payload_sha256` is proven absent from live `asset_data_raw` and currently represented equivalently through `external_ids.payload_hash`; semantic redesign remains intentionally deferred, and `source_record_id` remains intentionally unresolved
 
 ### ECC portfolio summary surfaces
 
@@ -311,7 +311,7 @@ Grounding notes:
 
 - `asset_links` is not proven by repo migrations on `main`, and staging proof run `23066495260` confirmed `public.asset_links` is not present in staging.
 - `external_ids` is proven live in staging as `jsonb not null default '{}'::jsonb`, but its canonical repo semantics remain documentation-only until a later decision task.
-- `payload_sha256` and `source_record_id` remain unresolved runtime-only expectations.
+- `payload_sha256` (runtime expectation only; proven absent in staging, with current equivalent hash representation observed in `public.assets.external_ids.payload_hash`) and `source_record_id` remain unresolved runtime-only expectations.
 - No repo migration on this branch proves any critical view for ECC or price-engine persistence.
 
 ## Staging Reconciliation Proof (2026-03-13)
@@ -328,9 +328,25 @@ Confirmed matches from staging proof:
 
 Confirmed mismatches from staging proof:
 - staging `public.asset_data_raw` exposes `id`, `asset_id`, `source`, `payload_jsonb`, and `fetched_at`, but does not expose the `0002`-era `organization_id`, `payload`, or `created_at` fields that repository migrations also describe
-- staging does not expose runtime-expected `asset_data_raw.payload_sha256` or `asset_data_raw.source_record_id`
+- staging does not expose runtime-expected `asset_data_raw.payload_sha256` or `asset_data_raw.source_record_id`; later proof run `23069329492` confirmed no equivalent hash key exists in `asset_data_raw.payload_jsonb` and that the current proven equivalent hash representation lives in `public.assets.external_ids.payload_hash`
 - staging `public.asset_specs_reconciled` includes a broader shape than either single migration alone proves, including `organization_id`, `spec_version`, `id`, `specs`, `provenance`, `effective_at`, and `created_at`
 - staging proof did not show policy `assets_org_isolation`, so the standalone policy file under `supabase/policies/` is not currently proven as active in staging
+
+## Payload SHA256 Discovery Proof (2026-03-13)
+
+Proof source:
+- `supabase_apply.yml` staging run `23069329492`
+- verification file: `supabase/verification/0006_payload_sha256_discovery.sql`
+
+Confirmed results:
+- `public.asset_data_raw.payload_sha256` is not present in staging
+- no column-specific indexes or constraints were returned for `payload_sha256`
+- no equivalent hash key was found in `public.asset_data_raw.payload_jsonb`
+- current proven equivalent hash representation exists in `public.assets.external_ids.payload_hash`
+- `public.assets.external_ids.payload_hash` was observed in `6` of `16` asset rows
+
+Decision note:
+- no schema change is justified from this proof alone; the current staging truth is absence in `public.asset_data_raw` plus equivalent representation in `public.assets.external_ids.payload_hash`
 
 ## Asset Links Discovery Proof (2026-03-13)
 
@@ -357,6 +373,9 @@ Objects still unknown after staging proof:
 1. Run the focused verification file `supabase/verification/0003_canonical_baseline_assertions.sql` after this branch merges so the reconciled repo baseline is re-proven against staging.
 2. Treat `asset_data_raw` fallback evidence as the canonical link authority until a future explicit schema proposal decides whether `asset_links` should be introduced as a governed table.
 3. Define whether ECC and price-engine surfaces will remain stub-only or receive explicit persistence contracts.
-4. Open a later decision task only if semantic expansion, redesign, or repo-migration canonicalization for `external_ids` becomes necessary after this documented staging proof.
+4. Open a later decision task only if semantic expansion, redesign, or repo-migration canonicalization for `external_ids` or its current `payload_hash` equivalence becomes necessary after these documented staging proofs.
+
+
+
 
 
