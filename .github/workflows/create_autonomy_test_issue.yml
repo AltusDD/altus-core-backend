@@ -1,6 +1,6 @@
 name: create-autonomy-test-issue
 
-on:
+"on":
   workflow_dispatch:
 
 permissions:
