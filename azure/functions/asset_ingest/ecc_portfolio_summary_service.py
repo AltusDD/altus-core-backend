@@ -14,6 +14,12 @@ class PortfolioSummaryBackingFields:
     asset_count: int | None = None
 
 
+@dataclass(frozen=True)
+class _SupabaseRestConfig:
+    url: str
+    service_role_key: str
+
+
 class PortfolioSummaryBackingSource(Protocol):
     def read_fields(self, portfolio_id: str, as_of: str | None) -> PortfolioSummaryBackingFields | None:
         ...
@@ -79,16 +85,31 @@ def build_portfolio_summary(portfolio_id: str, as_of: str | None) -> dict[str, A
 
 
 def _build_default_backing_source() -> PortfolioSummaryBackingSource:
-    if os.getenv('ALTUS_ECC_PORTFOLIO_SUMMARY_BACKING_MODE', '').strip() != 'assets_external_ids_count':
-        return _NoopPortfolioSummaryBackingSource()
-
-    supabase_url = os.getenv('ALTUS_ECC_PORTFOLIO_SUMMARY_SUPABASE_URL', '').strip()
-    service_role_key = os.getenv('ALTUS_ECC_PORTFOLIO_SUMMARY_SUPABASE_SERVICE_ROLE_KEY', '').strip()
     external_ids_key = os.getenv('ALTUS_ECC_PORTFOLIO_SUMMARY_PORTFOLIO_ID_EXTERNAL_IDS_KEY', '').strip()
-    if not supabase_url or not service_role_key or not external_ids_key:
+    supabase_config = _resolve_supabase_rest_config()
+    if not external_ids_key or supabase_config is None:
         return _NoopPortfolioSummaryBackingSource()
 
-    return _AssetsExternalIdsPortfolioCohortResolver(supabase_url, service_role_key, external_ids_key)
+    return _AssetsExternalIdsPortfolioCohortResolver(
+        supabase_config.url,
+        supabase_config.service_role_key,
+        external_ids_key,
+    )
+
+
+def _resolve_supabase_rest_config() -> _SupabaseRestConfig | None:
+    supabase_url = (
+        os.getenv('ALTUS_ECC_PORTFOLIO_SUMMARY_SUPABASE_URL', '').strip()
+        or os.getenv('SUPABASE_URL', '').strip()
+    )
+    service_role_key = (
+        os.getenv('ALTUS_ECC_PORTFOLIO_SUMMARY_SUPABASE_SERVICE_ROLE_KEY', '').strip()
+        or os.getenv('SUPABASE_SERVICE_ROLE_KEY', '').strip()
+    )
+    if not supabase_url or not service_role_key:
+        return None
+
+    return _SupabaseRestConfig(url=supabase_url, service_role_key=service_role_key)
 
 
 def _build_stub_portfolio_summary(portfolio_id: str, as_of: str | None) -> dict[str, Any]:
@@ -111,4 +132,5 @@ def _build_stub_portfolio_summary(portfolio_id: str, as_of: str | None) -> dict[
         'activeAlerts': seed % 4,
         'status': 'stub_ready',
     }
+
 

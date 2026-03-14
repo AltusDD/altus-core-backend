@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import types
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -53,6 +55,16 @@ class FakeBackingSource:
     def read_fields(self, portfolio_id: str, as_of: str | None):
         return self._fields
 
+
+class FakeUrlOpenResponse:
+    def __init__(self, content_range: str):
+        self.headers = {'Content-Range': content_range}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
 
 class EccPortfolioSummaryContractTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -152,6 +164,72 @@ class EccPortfolioSummaryContractTests(unittest.TestCase):
         self.assertEqual(payload['status'], 'stub_ready')
         self.assertEqual(payload['currency'], 'USD')
 
+    def test_default_backing_source_uses_shared_supabase_config_when_mapping_key_is_present(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                'SUPABASE_URL': 'https://example.supabase.co',
+                'SUPABASE_SERVICE_ROLE_KEY': 'service-role-key',
+                'ALTUS_ECC_PORTFOLIO_SUMMARY_PORTFOLIO_ID_EXTERNAL_IDS_KEY': 'portfolio_id',
+            },
+            clear=True,
+        ):
+            source = ecc_portfolio_summary_service._build_default_backing_source()
+
+        self.assertIsInstance(source, ecc_portfolio_summary_service._AssetsExternalIdsPortfolioCohortResolver)
+        self.assertEqual(source._supabase_url, 'https://example.supabase.co')
+        self.assertEqual(source._service_role_key, 'service-role-key')
+        self.assertEqual(source._external_ids_key, 'portfolio_id')
+
+    def test_default_backing_source_remains_noop_when_mapping_key_is_missing(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                'SUPABASE_URL': 'https://example.supabase.co',
+                'SUPABASE_SERVICE_ROLE_KEY': 'service-role-key',
+            },
+            clear=True,
+        ):
+            source = ecc_portfolio_summary_service._build_default_backing_source()
+
+        self.assertIsInstance(source, ecc_portfolio_summary_service._NoopPortfolioSummaryBackingSource)
+
+    def test_external_ids_resolver_reads_asset_count_from_content_range(self) -> None:
+        captured = {}
+        resolver = ecc_portfolio_summary_service._AssetsExternalIdsPortfolioCohortResolver(
+            'https://example.supabase.co',
+            'service-role-key',
+            'portfolio_id',
+        )
+
+        def fake_urlopen(request, timeout):
+            captured['url'] = request.full_url
+            captured['timeout'] = timeout
+            return FakeUrlOpenResponse('0-0/27')
+
+        with mock.patch.object(ecc_portfolio_summary_service, 'urlopen', side_effect=fake_urlopen):
+            fields = resolver.read_fields('portfolio-001', None)
+
+        self.assertEqual(fields.asset_count, 27)
+        self.assertEqual(captured['timeout'], 10)
+        self.assertIn('external_ids-%3E%3Eportfolio_id=eq.portfolio-001', captured['url'])
+
+    def test_external_ids_resolver_returns_none_for_invalid_content_range(self) -> None:
+        resolver = ecc_portfolio_summary_service._AssetsExternalIdsPortfolioCohortResolver(
+            'https://example.supabase.co',
+            'service-role-key',
+            'portfolio_id',
+        )
+
+        with mock.patch.object(
+            ecc_portfolio_summary_service,
+            'urlopen',
+            return_value=FakeUrlOpenResponse('invalid'),
+        ):
+            fields = resolver.read_fields('portfolio-001', None)
+
+        self.assertIsNone(fields)
 
 if __name__ == '__main__':
     unittest.main()
+
