@@ -17,6 +17,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 - `asset_links` is referenced below as a potential future fast-path relationship table, but staging proof run `23066495260` confirmed it is not present in staging and no migration on `main` currently proves it exists.
 - `public.assets.external_ids` is now proven in staging as a live `jsonb` object field with default `{}` and observed `payload_hash` key usage; staging proof run `23069329492` also confirmed `public.asset_data_raw.payload_sha256` is absent and that the current proven equivalent hash representation lives in `public.assets.external_ids.payload_hash`; semantic redesign remains deferred, while staging proof run `23073428262` confirmed `asset_data_raw.source_record_id` is absent and no equivalent source-record identity field is currently proven elsewhere.
 - Staging proof run `23061749612` confirmed `assets.display_name` exists, confirmed `asset_data_raw` follows the `payload_jsonb` / `fetched_at` shape, and did not prove policy `assets_org_isolation` as active.
+- Staging proof run `23090151849` structurally proved the broader `asset_specs_reconciled` shape, including extra live columns for versioning, provenance, and effective-dating support, but staging currently has zero rows so live semantic usage is not yet proven.
 
 ## Persistence Authority
 
@@ -74,6 +75,7 @@ Canonical runtime owner: `azure/functions/asset_ingest/function_app.py`
 - Archive evidence source prefix: `ASSET_ARCHIVE::`
 - Restore evidence source prefix: `ASSET_RESTORE::`
 - Delete evidence source prefix: `ASSET_DELETE::`
+
 
 
 
