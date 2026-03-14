@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "TITLE_RATE_PROVIDER_NOT_CONFIGURED",
+    "message": "No approved title-rate provider is configured.",
+    "details": {
+      "envVar": "PRICE_ENGINE_TITLE_RATE_PROVIDER"
+    }
+  }
+}

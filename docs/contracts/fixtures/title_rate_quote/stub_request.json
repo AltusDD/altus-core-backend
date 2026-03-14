@@ -1,0 +1,16 @@
+{
+  "transactionType": "purchase",
+  "propertyState": "MO",
+  "county": "Jackson",
+  "city": "Kansas City",
+  "postalCode": "64108",
+  "salesPrice": 425000,
+  "loanAmount": 300000,
+  "ownerPolicyAmount": 425000,
+  "lenderPolicyAmount": 300000,
+  "endorsements": ["CPL", "T-19"],
+  "transactionDate": "2026-03-14",
+  "providerContext": {
+    "requestedProvider": "approved-provider-key"
+  }
+}

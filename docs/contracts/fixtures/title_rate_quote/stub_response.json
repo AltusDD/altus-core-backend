@@ -1,0 +1,28 @@
+{
+  "providerKey": "stub",
+  "status": "stub",
+  "quoteReference": null,
+  "totals": {
+    "ownerPolicy": 0.0,
+    "lenderPolicy": 0.0,
+    "endorsements": 0.0,
+    "settlementServices": 0.0,
+    "recordingFees": 0.0,
+    "transferTaxes": 0.0,
+    "otherFees": 0.0,
+    "total": 0.0
+  },
+  "lineItems": [],
+  "assumptions": [
+    "No approved title-rate provider is configured for automated quoting yet.",
+    "Normalized request accepted for purchase in MO."
+  ],
+  "warnings": [
+    "Stub response only. Vendor implementation remains disabled pending an approved API or documented embed bridge."
+  ],
+  "expiresAt": null,
+  "providerContext": {
+    "mode": "stub",
+    "requestedProvider": "approved-provider-key"
+  }
+}
