@@ -185,3 +185,4 @@ from occupancy_candidate_columns occ_cols
 cross join occupancy_candidate_views occ_views
 cross join occupancy_candidate_routines occ_routines;
 
+
