@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from decimal import Decimal
@@ -12,6 +13,7 @@ from urllib.request import Request, urlopen
 @dataclass(frozen=True)
 class PortfolioSummaryBackingFields:
     asset_count: int | None = None
+    total_units: int | None = None
 
 
 @dataclass(frozen=True)
@@ -37,11 +39,18 @@ class _AssetsExternalIdsPortfolioCohortResolver:
         self._external_ids_key = external_ids_key
 
     def read_fields(self, portfolio_id: str, as_of: str | None) -> PortfolioSummaryBackingFields | None:
+        asset_rows, asset_count = self._read_asset_cohort(portfolio_id)
+        if asset_rows is None or asset_count is None:
+            return None
+
+        total_units = self._read_total_units(asset_rows, asset_count)
+        return PortfolioSummaryBackingFields(asset_count=asset_count, total_units=total_units)
+
+    def _read_asset_cohort(self, portfolio_id: str) -> tuple[list[dict[str, Any]] | None, int | None]:
         headers = {
             'apikey': self._service_role_key,
             'Authorization': f'Bearer {self._service_role_key}',
             'Prefer': 'count=exact',
-            'Range': '0-0',
         }
         params = {
             'select': 'id',
@@ -57,20 +66,69 @@ class _AssetsExternalIdsPortfolioCohortResolver:
 
         try:
             with urlopen(request, timeout=10) as response:
+                payload = json.loads(response.read().decode('utf-8'))
                 content_range = response.headers.get('Content-Range', '')
         except (HTTPError, URLError):
-            return None
+            return None, None
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return None, None
         if '/' not in content_range:
-            return None
+            return None, None
 
         total_text = content_range.rsplit('/', 1)[1].strip()
         if total_text in {'', '*'}:
-            return None
+            return None, None
 
         try:
-            return PortfolioSummaryBackingFields(asset_count=int(total_text))
+            return payload, int(total_text)
         except ValueError:
+            return None, None
+
+    def _read_total_units(self, asset_rows: list[dict[str, Any]], asset_count: int) -> int | None:
+        if asset_count == 0:
+            return 0
+
+        asset_ids = [row.get('id') for row in asset_rows if row.get('id')]
+        if len(asset_ids) != asset_count:
             return None
+
+        headers = {
+            'apikey': self._service_role_key,
+            'Authorization': f'Bearer {self._service_role_key}',
+        }
+        quoted_ids = ','.join(f'"{asset_id}"' for asset_id in asset_ids)
+        params = {
+            'select': 'asset_id,units_count',
+            'asset_id': f'in.({quoted_ids})',
+        }
+
+        query = urlencode(params)
+        request = Request(
+            f'{self._supabase_url}/rest/v1/asset_specs_reconciled?{query}',
+            headers=headers,
+            method='GET',
+        )
+
+        try:
+            with urlopen(request, timeout=10) as response:
+                payload = json.loads(response.read().decode('utf-8'))
+        except (HTTPError, URLError, json.JSONDecodeError, UnicodeDecodeError):
+            return None
+
+        if len(payload) != asset_count:
+            return None
+
+        total_units = 0
+        for row in payload:
+            units_count = row.get('units_count')
+            if units_count is None:
+                return None
+            try:
+                total_units += int(units_count)
+            except (TypeError, ValueError):
+                return None
+
+        return total_units
 
 
 def build_portfolio_summary(portfolio_id: str, as_of: str | None) -> dict[str, Any]:
@@ -81,6 +139,8 @@ def build_portfolio_summary(portfolio_id: str, as_of: str | None) -> dict[str, A
 
     if backing_fields.asset_count is not None:
         summary['assetCount'] = backing_fields.asset_count
+    if backing_fields.total_units is not None:
+        summary['totalUnits'] = backing_fields.total_units
     return summary
 
 
@@ -132,5 +192,3 @@ def _build_stub_portfolio_summary(portfolio_id: str, as_of: str | None) -> dict[
         'activeAlerts': seed % 4,
         'status': 'stub_ready',
     }
-
-

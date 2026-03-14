@@ -5,8 +5,8 @@ import os
 import sys
 import types
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 FUNCTION_ROOT = ROOT / 'azure' / 'functions' / 'asset_ingest'
@@ -57,14 +57,19 @@ class FakeBackingSource:
 
 
 class FakeUrlOpenResponse:
-    def __init__(self, content_range: str):
-        self.headers = {'Content-Range': content_range}
+    def __init__(self, body, content_range: str = ''):
+        self._body = body if isinstance(body, bytes) else json.dumps(body).encode('utf-8')
+        self.headers = {'Content-Range': content_range} if content_range else {}
+
+    def read(self) -> bytes:
+        return self._body
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc, tb):
         return False
+
 
 class EccPortfolioSummaryContractTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -164,6 +169,20 @@ class EccPortfolioSummaryContractTests(unittest.TestCase):
         self.assertEqual(payload['status'], 'stub_ready')
         self.assertEqual(payload['currency'], 'USD')
 
+    def test_total_units_can_be_backed_without_contract_shape_drift(self) -> None:
+        ecc_portfolio_summary_service._build_default_backing_source = lambda: FakeBackingSource(
+            ecc_portfolio_summary_service.PortfolioSummaryBackingFields(asset_count=27, total_units=108)
+        )
+
+        payload = ecc_portfolio_summary_service.build_portfolio_summary('portfolio-001', '2026-03-13')
+
+        self.assertEqual(set(payload.keys()), set(load_fixture('success_response.json')['data'].keys()))
+        self.assertEqual(payload['assetCount'], 27)
+        self.assertEqual(payload['totalUnits'], 108)
+        self.assertEqual(payload['portfolioId'], 'portfolio-001')
+        self.assertEqual(payload['asOfDate'], '2026-03-13')
+        self.assertEqual(payload['status'], 'stub_ready')
+
     def test_default_backing_source_uses_shared_supabase_config_when_mapping_key_is_present(self) -> None:
         with mock.patch.dict(
             os.environ,
@@ -194,8 +213,8 @@ class EccPortfolioSummaryContractTests(unittest.TestCase):
 
         self.assertIsInstance(source, ecc_portfolio_summary_service._NoopPortfolioSummaryBackingSource)
 
-    def test_external_ids_resolver_reads_asset_count_from_content_range(self) -> None:
-        captured = {}
+    def test_external_ids_resolver_reads_asset_count_and_total_units_from_resolved_cohort(self) -> None:
+        captured = []
         resolver = ecc_portfolio_summary_service._AssetsExternalIdsPortfolioCohortResolver(
             'https://example.supabase.co',
             'service-role-key',
@@ -203,16 +222,43 @@ class EccPortfolioSummaryContractTests(unittest.TestCase):
         )
 
         def fake_urlopen(request, timeout):
-            captured['url'] = request.full_url
-            captured['timeout'] = timeout
-            return FakeUrlOpenResponse('0-0/27')
+            captured.append((request.full_url, timeout))
+            if '/rest/v1/assets?' in request.full_url:
+                return FakeUrlOpenResponse([{'id': 'asset-1'}, {'id': 'asset-2'}], '0-1/2')
+            return FakeUrlOpenResponse([
+                {'asset_id': 'asset-1', 'units_count': 12},
+                {'asset_id': 'asset-2', 'units_count': 30},
+            ])
 
         with mock.patch.object(ecc_portfolio_summary_service, 'urlopen', side_effect=fake_urlopen):
             fields = resolver.read_fields('portfolio-001', None)
 
-        self.assertEqual(fields.asset_count, 27)
-        self.assertEqual(captured['timeout'], 10)
-        self.assertIn('external_ids-%3E%3Eportfolio_id=eq.portfolio-001', captured['url'])
+        self.assertEqual(fields.asset_count, 2)
+        self.assertEqual(fields.total_units, 42)
+        self.assertEqual(captured[0][1], 10)
+        self.assertIn('external_ids-%3E%3Eportfolio_id=eq.portfolio-001', captured[0][0])
+        self.assertIn('/rest/v1/asset_specs_reconciled?', captured[1][0])
+        self.assertIn('asset_id=in.%28%22asset-1%22%2C%22asset-2%22%29', captured[1][0])
+
+    def test_external_ids_resolver_preserves_fallback_for_incomplete_units_rows(self) -> None:
+        resolver = ecc_portfolio_summary_service._AssetsExternalIdsPortfolioCohortResolver(
+            'https://example.supabase.co',
+            'service-role-key',
+            'portfolio_id',
+        )
+
+        def fake_urlopen(request, timeout):
+            if '/rest/v1/assets?' in request.full_url:
+                return FakeUrlOpenResponse([{'id': 'asset-1'}, {'id': 'asset-2'}], '0-1/2')
+            return FakeUrlOpenResponse([
+                {'asset_id': 'asset-1', 'units_count': 12},
+            ])
+
+        with mock.patch.object(ecc_portfolio_summary_service, 'urlopen', side_effect=fake_urlopen):
+            fields = resolver.read_fields('portfolio-001', None)
+
+        self.assertEqual(fields.asset_count, 2)
+        self.assertIsNone(fields.total_units)
 
     def test_external_ids_resolver_returns_none_for_invalid_content_range(self) -> None:
         resolver = ecc_portfolio_summary_service._AssetsExternalIdsPortfolioCohortResolver(
@@ -224,12 +270,12 @@ class EccPortfolioSummaryContractTests(unittest.TestCase):
         with mock.patch.object(
             ecc_portfolio_summary_service,
             'urlopen',
-            return_value=FakeUrlOpenResponse('invalid'),
+            return_value=FakeUrlOpenResponse([], 'invalid'),
         ):
             fields = resolver.read_fields('portfolio-001', None)
 
         self.assertIsNone(fields)
 
+
 if __name__ == '__main__':
     unittest.main()
-
