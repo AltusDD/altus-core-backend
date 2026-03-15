@@ -174,12 +174,14 @@ class EccPortfolioAssetsContractTests(unittest.TestCase):
                     ecc_portfolio_assets_service.PortfolioAssetsBackingRow(
                         asset_id='asset-db-001',
                         display_name='Live Asset One',
+                        asset_type='industrial',
                         status='active',
                         total_units=23,
                     ),
                     ecc_portfolio_assets_service.PortfolioAssetsBackingRow(
                         asset_id='asset-db-002',
                         display_name='Live Asset Two',
+                        asset_type=None,
                         status='inactive',
                         total_units=None,
                     ),
@@ -200,11 +202,13 @@ class EccPortfolioAssetsContractTests(unittest.TestCase):
         self.assertEqual(set(payload['data'][0].keys()), set(fixture['data'][0].keys()))
         self.assertEqual(payload['data'][0]['assetId'], 'asset-db-001')
         self.assertEqual(payload['data'][0]['displayName'], 'Live Asset One')
+        self.assertEqual(payload['data'][0]['assetType'], 'industrial')
         self.assertEqual(payload['data'][0]['status'], 'active')
         self.assertEqual(payload['data'][0]['totalUnits'], 23)
         self.assertEqual(payload['data'][0]['occupiedUnits'], 7)
         self.assertEqual(payload['data'][1]['assetId'], 'asset-db-002')
         self.assertEqual(payload['data'][1]['displayName'], 'Live Asset Two')
+        self.assertEqual(payload['data'][1]['assetType'], 'multifamily')
         self.assertEqual(payload['data'][1]['status'], 'inactive')
         self.assertEqual(payload['data'][1]['totalUnits'], 10)
         self.assertEqual(payload['data'][1]['occupiedUnits'], 10)
@@ -253,7 +257,7 @@ class EccPortfolioAssetsContractTests(unittest.TestCase):
                 return FakeUrlOpenResponse(
                     [
                         {'id': 'asset-1', 'display_name': 'Asset One', 'status': 'active'},
-                        {'id': 'asset-2', 'display_name': 'Asset Two', 'status': 'inactive'},
+                        {'id': 'asset-2', 'display_name': 'Asset Two', 'asset_type': 'storage', 'status': 'inactive'},
                     ],
                     '1-2/7',
                 )
@@ -271,9 +275,11 @@ class EccPortfolioAssetsContractTests(unittest.TestCase):
         self.assertEqual(len(payload.rows), 2)
         self.assertEqual(payload.rows[0].asset_id, 'asset-1')
         self.assertEqual(payload.rows[0].display_name, 'Asset One')
+        self.assertIsNone(payload.rows[0].asset_type)
         self.assertEqual(payload.rows[0].status, 'active')
         self.assertEqual(payload.rows[0].total_units, 12)
         self.assertEqual(payload.rows[1].asset_id, 'asset-2')
+        self.assertEqual(payload.rows[1].asset_type, 'storage')
         self.assertEqual(payload.rows[1].total_units, 30)
         self.assertEqual(captured[0][1], 10)
         self.assertIn('external_ids-%3E%3Eportfolio_id=eq.portfolio-001', captured[0][0])
