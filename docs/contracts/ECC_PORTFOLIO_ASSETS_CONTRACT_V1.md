@@ -86,6 +86,7 @@ When the proven live backing path is configured and succeeds, the route may repl
 
 - `data[*].assetId` from `public.assets.id`
 - `data[*].displayName` from `public.assets.display_name`
+- `data[*].assetType` from `public.assets.asset_type`
 - `data[*].status` from `public.assets.status`
 - `data[*].totalUnits` from `public.asset_specs_reconciled.units_count` joined by `asset_specs_reconciled.asset_id -> public.assets.id`
 - `meta.total` from the exact resolved `public.assets` cohort size
@@ -93,8 +94,9 @@ When the proven live backing path is configured and succeeds, the route may repl
 Fallback rules for the current live slice:
 
 - if portfolio cohort resolution is unavailable, the full deterministic fallback payload is returned
+- if a returned live asset row lacks a proven `asset_type`, only that row's `assetType` remains on deterministic fallback
 - if a returned live asset row lacks a proven `units_count`, only that row's `totalUnits` remains on deterministic fallback
-- no occupancy, market value, geo, or asset-type semantics are inferred from DB truth in this slice
+- no occupancy, market value, or geo semantics are inferred from DB truth in this slice
 
 ## Error Contract
 
@@ -136,4 +138,4 @@ The proof-bearing fixtures for this route live under:
 - If the response payload, handler headers, fallback behavior, or live-backed field subset changes, the fixtures and tests must change in the same PR.
 - If the route begins reading additional request inputs later, the request contract and proof fixtures must be expanded in the same PR.
 - This contract does not claim write behavior because the route is read-only in the current implementation.
-- This contract now claims a narrow optional live read path for `assetId`, `displayName`, `status`, `totalUnits`, and `meta.total` only when the configured portfolio cohort mapping and normalized backing reads succeed.
+- This contract now claims a narrow optional live read path for `assetId`, `displayName`, `assetType`, `status`, `totalUnits`, and `meta.total` only when the configured portfolio cohort mapping and normalized backing reads succeed.
