@@ -14,7 +14,8 @@ This document records the currently executable contract for the ECC portfolio as
 - Returns a `400` JSON error envelope when `portfolioId` is missing or pagination inputs are invalid.
 - Returns a `500` JSON error envelope only when an unexpected internal exception occurs.
 - Adds response headers for build identity and ECC handler/domain identity.
-- Returns a deterministic payload today from in-code service logic derived from `portfolioId`, `limit`, and `offset`.
+- Returns deterministic fallback payload rows from in-code service logic when no proven backing source is configured or when live proof is incomplete.
+- May back a narrow live field subset from normalized read-only sources when the portfolio cohort mapping seam is configured and the backing read succeeds.
 
 ## Request Contract
 
@@ -70,15 +71,30 @@ Response shape:
 }
 ```
 
-Deterministic behavior grounded in current code:
+Current executable guarantees grounded in code:
 - top-level payload contains `data` and `meta`
 - `meta.portfolioId`, `meta.limit`, and `meta.offset` echo request values after validation/defaulting
-- `meta.total` is derived deterministically from the `portfolioId` character seed
-- each returned asset row is deterministic for the given `portfolioId`, `limit`, and `offset`
-- `assetType` is currently `multifamily`
-- `status` is currently `stub_ready`
+- `assetType` remains deterministic fallback data
+- `occupiedUnits` remains deterministic fallback data
+- `occupancyRate` remains deterministic fallback data
+- `marketValue` remains deterministic fallback data
+- `city` and `state` remain deterministic fallback data
 - `x-ecc-handler` is `ecc-portfolio-assets`
 - `x-ecc-domain-signature` is `ecc.portfolio.assets.v1`
+
+When the proven live backing path is configured and succeeds, the route may replace only this narrow field subset without changing the public response shape:
+
+- `data[*].assetId` from `public.assets.id`
+- `data[*].displayName` from `public.assets.display_name`
+- `data[*].status` from `public.assets.status`
+- `data[*].totalUnits` from `public.asset_specs_reconciled.units_count` joined by `asset_specs_reconciled.asset_id -> public.assets.id`
+- `meta.total` from the exact resolved `public.assets` cohort size
+
+Fallback rules for the current live slice:
+
+- if portfolio cohort resolution is unavailable, the full deterministic fallback payload is returned
+- if a returned live asset row lacks a proven `units_count`, only that row's `totalUnits` remains on deterministic fallback
+- no occupancy, market value, geo, or asset-type semantics are inferred from DB truth in this slice
 
 ## Error Contract
 
@@ -117,6 +133,7 @@ The proof-bearing fixtures for this route live under:
 
 ## Proof Rules
 
-- If the response payload, handler headers, or deterministic service logic changes, the fixtures and tests must change in the same PR.
+- If the response payload, handler headers, fallback behavior, or live-backed field subset changes, the fixtures and tests must change in the same PR.
 - If the route begins reading additional request inputs later, the request contract and proof fixtures must be expanded in the same PR.
-- This contract does not claim persistence behavior because the current implementation returns deterministic in-code portfolio asset data only.
+- This contract does not claim write behavior because the route is read-only in the current implementation.
+- This contract now claims a narrow optional live read path for `assetId`, `displayName`, `status`, `totalUnits`, and `meta.total` only when the configured portfolio cohort mapping and normalized backing reads succeed.
