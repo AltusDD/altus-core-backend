@@ -5,6 +5,7 @@ from typing import Any
 
 from server.price_engine.providers.corelogic.corelogic_client import CoreLogicClient
 from server.price_engine.providers.corelogic.corelogic_config import load_corelogic_config
+from server.price_engine.providers.corelogic.corelogic_models import mock_overlay_payload
 
 
 @dataclass(frozen=True)
@@ -29,3 +30,8 @@ class CoreLogicProvider:
             mode=str(payload["mode"]),
             property_intelligence=dict(payload["data"]),
         )
+
+    def get_property_overlay_payload(self, *, property_address: str, operator: str = "system") -> dict[str, Any]:
+        request = self._client.build_request(property_address=property_address, operator=operator)
+        self._client._log_request(request)
+        return mock_overlay_payload(property_address=property_address).to_dict()

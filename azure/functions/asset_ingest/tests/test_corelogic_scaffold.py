@@ -32,6 +32,44 @@ class CoreLogicScaffoldTests(unittest.TestCase):
             },
         )
 
+    def test_corelogic_provider_returns_mock_overlay_payload(self) -> None:
+        overlay = CoreLogicProvider().get_property_overlay_payload(
+            property_address="1518 Summit Ridge Dr, Kansas City, MO",
+            operator="tester",
+        )
+
+        self.assertEqual(
+            overlay,
+            {
+                "subject": {
+                    "address": "1518 Summit Ridge Dr, Kansas City, MO",
+                    "lat": 39.0997,
+                    "lng": -94.5786,
+                },
+                "overlays": {
+                    "parcelBoundary": None,
+                    "floodZone": {
+                        "zone": "X",
+                        "panel": "MOCK-1001",
+                        "effectiveDate": "2024-01-01",
+                    },
+                    "corelogicLayerStatus": "mock_ready",
+                },
+                "propertyIntelligence": {
+                    "avm": 245000,
+                    "beds": 3,
+                    "baths": 2.0,
+                    "sqFt": 1680,
+                    "yearBuilt": 1998,
+                },
+                "meta": {
+                    "provider": "corelogic",
+                    "mock": True,
+                    "approvalRequired": True,
+                },
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

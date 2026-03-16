@@ -1,0 +1,28 @@
+{
+  "subject": {
+    "address": "1518 Summit Ridge Dr, Kansas City, MO",
+    "lat": 39.0997,
+    "lng": -94.5786
+  },
+  "overlays": {
+    "parcelBoundary": null,
+    "floodZone": {
+      "zone": "X",
+      "panel": "MOCK-1001",
+      "effectiveDate": "2024-01-01"
+    },
+    "corelogicLayerStatus": "mock_ready"
+  },
+  "propertyIntelligence": {
+    "avm": 245000,
+    "beds": 3,
+    "baths": 2.0,
+    "sqFt": 1680,
+    "yearBuilt": 1998
+  },
+  "meta": {
+    "provider": "corelogic",
+    "mock": true,
+    "approvalRequired": true
+  }
+}
