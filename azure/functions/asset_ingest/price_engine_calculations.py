@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from price_engine_disposition import build_disposition_metrics
 from price_engine_errors import PriceEngineError
 from price_engine_financing_carry import build_financing_carry
 from price_engine_financing_treatment import build_financing_treatment
@@ -28,6 +29,7 @@ class DealInputs:
     cash_available: Decimal
     rent_monthly: Decimal
     operating_expense_monthly: Decimal
+    exit_sale_price: Decimal
     selling_costs: Decimal
     loan_origination_fee: Decimal
     underwriting_fee: Decimal
@@ -56,6 +58,9 @@ class DealInputs:
     total_interest_carry: Decimal
     debt_service_type: str
     interest_only: bool
+    gross_sale_proceeds: Decimal
+    total_exit_costs: Decimal
+    net_disposition_proceeds: Decimal
     loan_amount: Decimal
     financed_ltv: Decimal
     holding_months: int
@@ -102,6 +107,10 @@ def calculate_price_engine_from_inputs(inputs: DealInputs) -> dict[str, Any]:
         "MonthlyDebtService": _round_currency(inputs.monthly_debt_service),
         "TotalInterestCarry": _round_currency(inputs.total_interest_carry),
         "DebtServiceType": inputs.debt_service_type,
+        "GrossSaleProceeds": _round_currency(inputs.gross_sale_proceeds),
+        "TotalExitCosts": _round_currency(inputs.total_exit_costs),
+        "ExitLoanPayoff": _round_currency(inputs.exit_loan_payoff),
+        "NetDispositionProceeds": _round_currency(inputs.net_disposition_proceeds),
     }
 
 
@@ -118,6 +127,7 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
     cash_available = _decimal_field(payload, "cashAvailable")
     rent_monthly = _decimal_field(payload, "rentMonthly", required=False, default=Decimal("0"))
     operating_expense_monthly = _decimal_field(payload, "operatingExpenseMonthly", required=False, default=Decimal("0"))
+    exit_sale_price = _decimal_field(payload, "exitSalePrice", required=False, default=after_repair_value)
     default_selling_costs = after_repair_value * _DEFAULT_SELLING_COST_RATE
     selling_costs = _decimal_field(payload, "sellingCosts", required=False, default=default_selling_costs)
     loan_origination_fee = _decimal_field(payload, "loanOriginationFee", required=False, default=Decimal("0"))
@@ -175,6 +185,12 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
         holding_months=holding_months,
         amortization_months=amortization_months,
     )
+    disposition = build_disposition_metrics(
+        payload,
+        default_sale_price=exit_sale_price,
+        exit_loan_payoff=financing_carry.exit_loan_payoff,
+        legacy_selling_costs=selling_costs,
+    )
 
     numeric_fields = (
         purchase_price,
@@ -219,6 +235,7 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
         cash_available=cash_available,
         rent_monthly=rent_monthly,
         operating_expense_monthly=operating_expense_monthly,
+        exit_sale_price=exit_sale_price,
         selling_costs=selling_costs,
         loan_origination_fee=loan_origination_fee,
         underwriting_fee=underwriting_fee,
@@ -247,6 +264,9 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
         total_interest_carry=financing_carry.total_interest_carry,
         debt_service_type=financing_carry.debt_service_type,
         interest_only=financing_carry.interest_only,
+        gross_sale_proceeds=disposition.gross_sale_proceeds,
+        total_exit_costs=disposition.total_exit_costs,
+        net_disposition_proceeds=disposition.net_disposition_proceeds,
         loan_amount=loan_amount,
         financed_ltv=financed_ltv,
         holding_months=holding_months,
@@ -257,9 +277,15 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
 
 
 def calculate_mao(inputs: DealInputs) -> Decimal:
-    net_sale_proceeds = inputs.after_repair_value - inputs.selling_costs
-    target_profit = inputs.after_repair_value * inputs.target_profit_margin
-    return net_sale_proceeds - inputs.rehab_cost - calculate_effective_holding_costs(inputs) - calculate_total_transaction_costs(inputs) - target_profit
+    target_profit = inputs.gross_sale_proceeds * inputs.target_profit_margin
+    return (
+        inputs.gross_sale_proceeds
+        - inputs.total_exit_costs
+        - inputs.rehab_cost
+        - calculate_effective_holding_costs(inputs)
+        - calculate_total_transaction_costs(inputs)
+        - target_profit
+    )
 
 
 def calculate_cash_to_close(inputs: DealInputs) -> Decimal:
@@ -276,19 +302,18 @@ def calculate_cash_on_cash(inputs: DealInputs, cash_to_close: Decimal | None = N
 def calculate_irr(inputs: DealInputs, cash_to_close: Decimal | None = None) -> Decimal:
     effective_cash_to_close = cash_to_close if cash_to_close is not None else calculate_cash_to_close(inputs)
     monthly_income = calculate_monthly_levered_cash_flow(inputs)
-    terminal_value = inputs.after_repair_value - inputs.selling_costs - inputs.exit_loan_payoff
     cashflows = (
         [-effective_cash_to_close]
         + [monthly_income for _ in range(max(inputs.holding_months - 1, 0))]
-        + [monthly_income + terminal_value]
+        + [monthly_income + inputs.net_disposition_proceeds]
     )
     return _annualized_irr(cashflows)
 
 
 def calculate_profit(inputs: DealInputs) -> Decimal:
     return (
-        inputs.after_repair_value
-        - inputs.selling_costs
+        inputs.gross_sale_proceeds
+        - inputs.total_exit_costs
         - inputs.purchase_price
         - inputs.rehab_cost
         - calculate_effective_holding_costs(inputs)

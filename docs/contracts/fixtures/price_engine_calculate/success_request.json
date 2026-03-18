@@ -27,5 +27,11 @@
   "holdingMonths": 12,
   "interestOnly": false,
   "amortizationMonths": 360,
+  "exitSalePrice": 225000,
+  "saleCommissionRate": 0.06,
+  "sellerClosingCostRate": 0.02,
+  "dispositionFee": 1500,
+  "sellerConcessions": 2500,
+  "otherExitCosts": 1000,
   "targetProfitMargin": 0.12
 }

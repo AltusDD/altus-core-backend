@@ -1,9 +1,9 @@
 {
-  "MAO": 117146.12,
-  "IRR": 89.27,
+  "MAO": 116146.12,
+  "IRR": 88.57,
   "CoC": 16.79,
   "CashToClose": 61000.0,
-  "Profit": 23546.12,
+  "Profit": 23146.12,
   "RiskScore": 67,
   "TotalLenderFees": 3825.0,
   "TotalTitleFees": 0.0,
@@ -13,5 +13,9 @@
   "FinancedTransactionCosts": 5745.0,
   "MonthlyDebtService": 746.57,
   "TotalInterestCarry": 8108.88,
-  "DebtServiceType": "amortized"
+  "DebtServiceType": "amortized",
+  "GrossSaleProceeds": 225000.0,
+  "TotalExitCosts": 23000.0,
+  "ExitLoanPayoff": 100895.06,
+  "NetDispositionProceeds": 101104.94
 }
