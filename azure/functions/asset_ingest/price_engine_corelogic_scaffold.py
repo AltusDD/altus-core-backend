@@ -32,6 +32,13 @@ class CoreLogicIntegrationScaffold:
     state: str
     state_label: str
     reason_codes: list[str]
+    artifact_type: str | None
+    artifact_id: str | None
+    trace_key: str | None
+    event_type: str | None
+    event_ref: str | None
+    mock_profile: str | None
+    mock_profile_label: str | None
     mock_payload: dict[str, Any] | None
 
 
@@ -109,6 +116,13 @@ def _build_scaffold(
         state=state,
         state_label=_build_state_label(state),
         reason_codes=_ordered_unique_reason_codes(reason_codes),
+        artifact_type=_build_artifact_type(mode),
+        artifact_id=_build_artifact_id(mode),
+        trace_key=_build_trace_key(mode),
+        event_type=_build_event_type(mode),
+        event_ref=_build_event_ref(mode),
+        mock_profile=_build_mock_profile(mode),
+        mock_profile_label=_build_mock_profile_label(mode),
         mock_payload=mock_payload,
     )
 
@@ -135,6 +149,50 @@ def _build_mock_payload() -> dict[str, Any]:
         "state": CORELOGIC_STATE_MOCK_READY,
         "propertyOverlay": "mock_static",
     }
+
+
+def _build_artifact_type(mode: str) -> str | None:
+    if mode == CORELOGIC_MODE_MOCK:
+        return "corelogic_mock_payload"
+    return None
+
+
+def _build_artifact_id(mode: str) -> str | None:
+    if mode == CORELOGIC_MODE_MOCK:
+        return "corelogic-mock-title-quote-v1"
+    return None
+
+
+def _build_trace_key(mode: str) -> str | None:
+    artifact_id = _build_artifact_id(mode)
+    if mode == CORELOGIC_MODE_MOCK and artifact_id:
+        return f"{CORELOGIC_PROVIDER_KEY}:mock:{artifact_id}"
+    return None
+
+
+def _build_event_type(mode: str) -> str | None:
+    if mode == CORELOGIC_MODE_MOCK:
+        return "corelogic_mock_title_quote"
+    return None
+
+
+def _build_event_ref(mode: str) -> str | None:
+    trace_key = _build_trace_key(mode)
+    if trace_key is None:
+        return None
+    return f"integration-event:{trace_key}"
+
+
+def _build_mock_profile(mode: str) -> str | None:
+    if mode == CORELOGIC_MODE_MOCK:
+        return "title_quote_baseline"
+    return None
+
+
+def _build_mock_profile_label(mode: str) -> str | None:
+    if mode == CORELOGIC_MODE_MOCK:
+        return "Title Quote Baseline Mock"
+    return None
 
 
 def _resolve_enabled(scaffold_context: dict[str, Any]) -> bool:
@@ -183,4 +241,3 @@ def _scaffold_context(provider_context: dict[str, Any] | None) -> dict[str, Any]
 
 def _env_flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
-

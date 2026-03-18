@@ -268,6 +268,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                         "integration_disabled",
                         "mode_disabled",
                     ],
+                    "integrationArtifactType": None,
+                    "integrationArtifactId": None,
+                    "integrationTraceKey": None,
+                    "integrationEventType": None,
+                    "integrationEventRef": None,
+                    "integrationMockProfile": None,
+                    "integrationMockProfileLabel": None,
                     "exportReadiness": "blocked",
                     "exportReadinessLabel": "Export Blocked",
                     "exportReadinessReasonCodes": [
@@ -486,6 +493,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "integration_disabled",
                     "mode_disabled",
                 ],
+                "integrationArtifactType": None,
+                "integrationArtifactId": None,
+                "integrationTraceKey": None,
+                "integrationEventType": None,
+                "integrationEventRef": None,
+                "integrationMockProfile": None,
+                "integrationMockProfileLabel": None,
                 "exportReadiness": "conditional",
                 "exportReadinessLabel": "Conditionally Export Ready",
                 "exportReadinessReasonCodes": [
@@ -629,6 +643,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "integration_disabled",
                     "mode_disabled",
                 ],
+                "integrationArtifactType": None,
+                "integrationArtifactId": None,
+                "integrationTraceKey": None,
+                "integrationEventType": None,
+                "integrationEventRef": None,
+                "integrationMockProfile": None,
+                "integrationMockProfileLabel": None,
                 "exportReadiness": "blocked",
                 "exportReadinessLabel": "Export Blocked",
                 "exportReadinessReasonCodes": [
@@ -685,6 +706,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(provenance["titleQuote"]["exportReadiness"], "blocked")
         self.assertEqual(provenance["titleQuote"]["auditCompleteness"], "partial")
         self.assertEqual(provenance["titleQuote"]["integrationState"], "inactive")
+        self.assertIsNone(provenance["titleQuote"]["integrationArtifactType"])
+        self.assertIsNone(provenance["titleQuote"]["integrationArtifactId"])
+        self.assertIsNone(provenance["titleQuote"]["integrationTraceKey"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEventType"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEventRef"])
+        self.assertIsNone(provenance["titleQuote"]["integrationMockProfile"])
+        self.assertIsNone(provenance["titleQuote"]["integrationMockProfileLabel"])
 
     def test_source_event_bundle_status_is_missing_when_no_events_exist(self) -> None:
         provenance = build_price_engine_provenance(
@@ -727,6 +755,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             provenance["titleQuote"]["integrationReasonCodes"],
             ["integration_disabled", "mode_disabled"],
         )
+        self.assertIsNone(provenance["titleQuote"]["integrationArtifactType"])
+        self.assertIsNone(provenance["titleQuote"]["integrationArtifactId"])
+        self.assertIsNone(provenance["titleQuote"]["integrationTraceKey"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEventType"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEventRef"])
+        self.assertIsNone(provenance["titleQuote"]["integrationMockProfile"])
+        self.assertIsNone(provenance["titleQuote"]["integrationMockProfileLabel"])
 
     def test_warning_family_display_priority_honors_exact_priority_order(self) -> None:
         provenance = build_price_engine_provenance(
@@ -1020,6 +1055,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(scaffold.mode, "disabled")
         self.assertEqual(scaffold.state, "inactive")
         self.assertEqual(scaffold.reason_codes, ["integration_disabled", "mode_disabled"])
+        self.assertIsNone(scaffold.artifact_type)
+        self.assertIsNone(scaffold.artifact_id)
+        self.assertIsNone(scaffold.trace_key)
+        self.assertIsNone(scaffold.event_type)
+        self.assertIsNone(scaffold.event_ref)
+        self.assertIsNone(scaffold.mock_profile)
+        self.assertIsNone(scaffold.mock_profile_label)
         self.assertEqual(probe["called"], 0)
 
     def test_corelogic_scaffold_mock_mode_is_ready_without_network_calls(self) -> None:
@@ -1037,6 +1079,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(scaffold.mode, "mock")
         self.assertEqual(scaffold.state, "mock_ready")
         self.assertEqual(scaffold.reason_codes, ["mode_mock"])
+        self.assertEqual(scaffold.artifact_type, "corelogic_mock_payload")
+        self.assertEqual(scaffold.artifact_id, "corelogic-mock-title-quote-v1")
+        self.assertEqual(scaffold.trace_key, "corelogic:mock:corelogic-mock-title-quote-v1")
+        self.assertEqual(scaffold.event_type, "corelogic_mock_title_quote")
+        self.assertEqual(scaffold.event_ref, "integration-event:corelogic:mock:corelogic-mock-title-quote-v1")
+        self.assertEqual(scaffold.mock_profile, "title_quote_baseline")
+        self.assertEqual(scaffold.mock_profile_label, "Title Quote Baseline Mock")
         self.assertIsNotNone(scaffold.mock_payload)
         self.assertEqual(probe["called"], 0)
 
@@ -1052,6 +1101,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             scaffold.reason_codes,
             ["live_calls_not_allowed", "live_mode_enabled"],
         )
+        self.assertIsNone(scaffold.artifact_type)
+        self.assertIsNone(scaffold.artifact_id)
+        self.assertIsNone(scaffold.trace_key)
+        self.assertIsNone(scaffold.event_type)
+        self.assertIsNone(scaffold.event_ref)
+        self.assertIsNone(scaffold.mock_profile)
+        self.assertIsNone(scaffold.mock_profile_label)
 
     def test_corelogic_scaffold_live_mode_with_allow_live_calls_false_remains_blocked(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1065,6 +1121,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             scaffold.reason_codes,
             ["live_calls_not_allowed", "live_mode_enabled"],
         )
+        self.assertIsNone(scaffold.artifact_type)
+        self.assertIsNone(scaffold.artifact_id)
+        self.assertIsNone(scaffold.trace_key)
+        self.assertIsNone(scaffold.event_type)
+        self.assertIsNone(scaffold.event_ref)
+        self.assertIsNone(scaffold.mock_profile)
+        self.assertIsNone(scaffold.mock_profile_label)
 
     def test_corelogic_scaffold_live_mode_with_missing_credentials_remains_blocked(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1080,6 +1143,47 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             scaffold.reason_codes,
             ["live_credentials_missing", "live_mode_enabled"],
         )
+        self.assertIsNone(scaffold.artifact_type)
+        self.assertIsNone(scaffold.artifact_id)
+        self.assertIsNone(scaffold.trace_key)
+        self.assertIsNone(scaffold.event_type)
+        self.assertIsNone(scaffold.event_ref)
+        self.assertIsNone(scaffold.mock_profile)
+        self.assertIsNone(scaffold.mock_profile_label)
+
+    def test_provenance_populates_mock_integration_enrichment_only_in_mock_mode(self) -> None:
+        os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
+        os.environ["PRICE_ENGINE_CORELOGIC_MODE"] = "mock"
+        os.environ.pop("PRICE_ENGINE_CORELOGIC_ALLOW_LIVE_CALLS", None)
+
+        provenance = build_price_engine_provenance(
+            title_quote_context=PriceEngineTitleQuoteContext(
+                fee_inputs={},
+                provider_key="stub",
+                status="stub",
+                quote_reference=None,
+                expires_at=None,
+                warnings=[],
+                assumptions=[],
+                provider_context={},
+            ),
+            scenario_profile="flip",
+            applied_preset_fields=[],
+            validation_warnings=[],
+        )
+
+        self.assertEqual(provenance["titleQuote"]["integrationMode"], "mock")
+        self.assertEqual(provenance["titleQuote"]["integrationState"], "mock_ready")
+        self.assertEqual(provenance["titleQuote"]["integrationArtifactType"], "corelogic_mock_payload")
+        self.assertEqual(provenance["titleQuote"]["integrationArtifactId"], "corelogic-mock-title-quote-v1")
+        self.assertEqual(provenance["titleQuote"]["integrationTraceKey"], "corelogic:mock:corelogic-mock-title-quote-v1")
+        self.assertEqual(provenance["titleQuote"]["integrationEventType"], "corelogic_mock_title_quote")
+        self.assertEqual(
+            provenance["titleQuote"]["integrationEventRef"],
+            "integration-event:corelogic:mock:corelogic-mock-title-quote-v1",
+        )
+        self.assertEqual(provenance["titleQuote"]["integrationMockProfile"], "title_quote_baseline")
+        self.assertEqual(provenance["titleQuote"]["integrationMockProfileLabel"], "Title Quote Baseline Mock")
 
 
 if __name__ == "__main__":

@@ -112,6 +112,13 @@
         "integration_disabled",
         "mode_disabled"
       ],
+      "integrationArtifactType": null,
+      "integrationArtifactId": null,
+      "integrationTraceKey": null,
+      "integrationEventType": null,
+      "integrationEventRef": null,
+      "integrationMockProfile": null,
+      "integrationMockProfileLabel": null,
       "exportReadiness": "blocked",
       "exportReadinessLabel": "Export Blocked",
       "exportReadinessReasonCodes": [
