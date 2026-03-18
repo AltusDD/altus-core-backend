@@ -173,6 +173,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "quotedAt": None,
                     "capturedAt": None,
                     "expiresAt": None,
+                    "sourceWarnings": [
+                        "Stub response only. Vendor implementation remains disabled pending an approved API or documented embed bridge."
+                    ],
+                    "exportArtifactId": None,
+                    "exportArtifactType": None,
                 },
                 "scenario": {
                     "profile": "flip",
@@ -279,6 +284,8 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                         "quotedAt": "2026-03-18T15:45:00Z",
                         "capturedAt": "2026-03-18T15:46:00Z",
                         "source": "liberty_iframe_snapshot",
+                        "exportArtifactId": "liberty-export-001",
+                        "exportArtifactType": "title_quote_snapshot",
                         "fees": {
                             "titlePremium": 1800,
                             "settlementFee": 850,
@@ -309,6 +316,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "quotedAt": "2026-03-18T15:45:00Z",
                 "capturedAt": "2026-03-18T15:46:00Z",
                 "expiresAt": None,
+                "sourceWarnings": [
+                    "Liberty public iframe currently exposes a tokenized app launch rather than a documented backend quote API."
+                ],
+                "exportArtifactId": "liberty-export-001",
+                "exportArtifactType": "title_quote_snapshot",
             },
         )
         self.assertEqual(metrics["Provenance"]["trace"]["generatedAt"], None)
@@ -373,6 +385,12 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "quotedAt": None,
                 "capturedAt": None,
                 "expiresAt": None,
+                "sourceWarnings": [
+                    "Liberty quote retrieval is unavailable because no approved Liberty snapshot was provided to the ingest path.",
+                    "No order was placed and no unsupported browser automation or scraping was attempted.",
+                ],
+                "exportArtifactId": None,
+                "exportArtifactType": None,
             },
         )
 

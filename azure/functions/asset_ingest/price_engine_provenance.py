@@ -29,6 +29,9 @@ def build_price_engine_provenance(
             "quotedAt": _string_or_none(title_quote_context.provider_context.get("quotedAt")),
             "capturedAt": _string_or_none(title_quote_context.provider_context.get("capturedAt")),
             "expiresAt": title_quote_context.expires_at,
+            "sourceWarnings": list(title_quote_context.warnings),
+            "exportArtifactId": _string_or_none(title_quote_context.provider_context.get("exportArtifactId")),
+            "exportArtifactType": _string_or_none(title_quote_context.provider_context.get("exportArtifactType")),
         },
         "scenario": {
             "profile": scenario_profile,

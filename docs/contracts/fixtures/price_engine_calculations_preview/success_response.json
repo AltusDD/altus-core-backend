@@ -44,7 +44,12 @@
       "snapshotVersion": null,
       "quotedAt": null,
       "capturedAt": null,
-      "expiresAt": null
+      "expiresAt": null,
+      "sourceWarnings": [
+        "Stub response only. Vendor implementation remains disabled pending an approved API or documented embed bridge."
+      ],
+      "exportArtifactId": null,
+      "exportArtifactType": null
     },
     "scenario": {
       "profile": "flip",

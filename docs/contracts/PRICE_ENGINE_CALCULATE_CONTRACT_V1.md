@@ -147,7 +147,10 @@ Response shape:
       "snapshotVersion": null,
       "quotedAt": null,
       "capturedAt": null,
-      "expiresAt": null
+      "expiresAt": null,
+      "sourceWarnings": [],
+      "exportArtifactId": null,
+      "exportArtifactType": null
     },
     "scenario": {
       "profile": "string",
@@ -169,7 +172,7 @@ Notes:
 - `CoC` uses annual net operating cash flow divided by upfront cash to close.
 - `TotalLenderFees` aggregates loan origination, underwriting, processing, appraisal, and credit report fees.
 - `TotalTitleFees` is sourced from the normalized title-rate quote mapping layer rather than caller-supplied title fee inputs.
-- When `PRICE_ENGINE_TITLE_RATE_PROVIDER=liberty` and an approved `providerContext.libertyQuote` snapshot is present, title fees are sourced from the Liberty quote bridge instead of the zero-fee stub path.
+- When `PRICE_ENGINE_TITLE_RATE_PROVIDER=liberty` and an approved `providerContext.libertySnapshot` payload is present, title fees are sourced from the Liberty snapshot ingest path instead of the zero-fee stub path.
 - `TotalPoints` is calculated as `loanAmount * pointsRate` when `pointsRate` is provided; otherwise it falls back to the flat `points` input.
 - `TotalTransactionCosts` aggregates `closingCosts + TotalLenderFees + TotalTitleFees + TotalPoints`.
 - `CashPaidTransactionCosts` includes only non-financed lender fees, title fees, and points.
@@ -195,6 +198,8 @@ Notes:
 - `Provenance.titleQuote.quoteReference` surfaces the provider quote or snapshot reference when available.
 - `Provenance.titleQuote.snapshotVersion` surfaces the normalized snapshot version when available.
 - `Provenance.titleQuote.quotedAt`, `capturedAt`, and `expiresAt` surface normalized quote-timing metadata when available and are otherwise `null`.
+- `Provenance.titleQuote.sourceWarnings` surfaces deterministic source-quality warnings already known in the quote-response path, including stub use, fallback use, and legacy alias normalization.
+- `Provenance.titleQuote.exportArtifactId` and `exportArtifactType` surface export-reference metadata when the normalized quote source provides it and are otherwise `null`.
 - `Provenance.scenario.profile` echoes the selected scenario profile.
 - `Provenance.scenario.appliedPresetFields` and `Provenance.scenario.validationWarnings` repeat the normalized assumption path used for the calculation.
 - `Provenance.trace.generatedAt` is returned as `null` in this slice to preserve deterministic responses while reserving the trace field for future additive timing metadata.
