@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from price_engine_calculations import (
-    PriceEngineError,
     build_deal_inputs,
     calculate_price_engine_from_inputs,
 )
+from price_engine_errors import PriceEngineError
 from price_engine_title_quote_mapper import enrich_payload_with_title_quote
 
 

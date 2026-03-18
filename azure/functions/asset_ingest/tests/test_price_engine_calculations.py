@@ -11,9 +11,12 @@ if str(FUNCTION_ROOT) not in sys.path:
 
 from price_engine_calculations import (  # noqa: E402
     build_deal_inputs,
+    calculate_cash_paid_transaction_costs,
     calculate_cash_on_cash,
+    calculate_financed_transaction_costs,
     calculate_irr,
     calculate_mao,
+    calculate_total_points,
     calculate_total_lender_fees,
     calculate_total_title_fees,
     calculate_total_transaction_costs,
@@ -49,6 +52,10 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "processingFee": 695,
                 "appraisalFee": 550,
                 "creditReportFee": 85,
+                "pointsRate": 0.02,
+                "financeLenderFees": True,
+                "financeTitleFees": False,
+                "financePoints": True,
                 "titlePremium": 1800,
                 "settlementFee": 850,
                 "recordingFee": 225,
@@ -59,10 +66,13 @@ class PriceEngineCalculationsTests(unittest.TestCase):
 
         self.assertEqual(calculate_total_lender_fees(inputs).quantize(Decimal("0.01")), Decimal("3825.00"))
         self.assertEqual(calculate_total_title_fees(inputs).quantize(Decimal("0.01")), Decimal("3700.00"))
-        self.assertEqual(calculate_total_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("14525.00"))
-        self.assertEqual(calculate_mao(inputs).quantize(Decimal("0.01")), Decimal("123475.00"))
-        self.assertEqual(calculate_cash_on_cash(inputs).quantize(Decimal("0.01")), Decimal("28.02"))
-        self.assertEqual(calculate_irr(inputs).quantize(Decimal("0.01")), Decimal("93.92"))
+        self.assertEqual(calculate_total_points(inputs).quantize(Decimal("0.01")), Decimal("1920.00"))
+        self.assertEqual(calculate_total_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("16445.00"))
+        self.assertEqual(calculate_cash_paid_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("3700.00"))
+        self.assertEqual(calculate_financed_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("5745.00"))
+        self.assertEqual(calculate_mao(inputs).quantize(Decimal("0.01")), Decimal("121555.00"))
+        self.assertEqual(calculate_cash_on_cash(inputs).quantize(Decimal("0.01")), Decimal("29.68"))
+        self.assertEqual(calculate_irr(inputs).quantize(Decimal("0.01")), Decimal("96.82"))
 
     def test_service_uses_stub_title_quote_when_provider_is_unavailable(self) -> None:
         os.environ.pop("PRICE_ENGINE_TITLE_RATE_PROVIDER", None)
@@ -84,24 +94,26 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "processingFee": 695,
                 "appraisalFee": 550,
                 "creditReportFee": 85,
+                "pointsRate": 0.02,
+                "financeLenderFees": True,
+                "financeTitleFees": True,
+                "financePoints": True,
                 "propertyState": "MO",
                 "county": "Jackson",
                 "city": "Kansas City",
                 "postalCode": "64108",
                 "endorsements": ["CPL", "T-19"],
                 "transactionDate": "2026-03-18",
-                "titlePremium": 1800,
-                "settlementFee": 850,
-                "recordingFee": 225,
-                "ownerPolicy": 450,
-                "lenderPolicy": 375,
             }
         )
 
         self.assertEqual(metrics["TotalLenderFees"], 3825.0)
         self.assertEqual(metrics["TotalTitleFees"], 0.0)
-        self.assertEqual(metrics["TotalTransactionCosts"], 10825.0)
-        self.assertEqual(metrics["CashToClose"], 64825.0)
+        self.assertEqual(metrics["TotalPoints"], 1920.0)
+        self.assertEqual(metrics["CashPaidTransactionCosts"], 0.0)
+        self.assertEqual(metrics["FinancedTransactionCosts"], 5745.0)
+        self.assertEqual(metrics["TotalTransactionCosts"], 12745.0)
+        self.assertEqual(metrics["CashToClose"], 61000.0)
 
 
 if __name__ == "__main__":
