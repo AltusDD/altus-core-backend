@@ -1100,6 +1100,27 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(scaffold.event_ref)
         self.assertIsNone(scaffold.mock_profile)
         self.assertIsNone(scaffold.mock_profile_label)
+        self.assertEqual(
+            scaffold.normalized_result,
+            {
+                "provider": "corelogic",
+                "mode": "disabled",
+                "executionState": "not_executed",
+                "resultType": "none",
+                "artifactType": None,
+                "artifactId": None,
+                "traceKey": None,
+                "eventType": None,
+                "eventRef": None,
+                "quoteReference": None,
+                "snapshotVersion": None,
+                "warnings": [],
+                "warningCodes": [],
+                "warningSeverities": [],
+                "warningFamilies": [],
+                "payload": None,
+            },
+        )
         self.assertEqual(probe["called"], 0)
 
     def test_corelogic_scaffold_mock_mode_is_ready_without_network_calls(self) -> None:
@@ -1130,6 +1151,36 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(scaffold.mock_profile, "title_quote_baseline")
         self.assertEqual(scaffold.mock_profile_label, "Title Quote Baseline Mock")
         self.assertIsNotNone(scaffold.mock_payload)
+        self.assertEqual(
+            scaffold.normalized_result,
+            {
+                "provider": "corelogic",
+                "mode": "mock",
+                "executionState": "mock_executed",
+                "resultType": "mock_title_quote",
+                "artifactType": "corelogic_mock_payload",
+                "artifactId": "corelogic-mock-title-quote-v1",
+                "traceKey": "corelogic:mock:corelogic-mock-title-quote-v1",
+                "eventType": "corelogic_mock_title_quote",
+                "eventRef": "integration-event:corelogic:mock:corelogic-mock-title-quote-v1",
+                "quoteReference": "CORELOGIC-MOCK-QUOTE-001",
+                "snapshotVersion": "mock-v1",
+                "warnings": [],
+                "warningCodes": [],
+                "warningSeverities": [],
+                "warningFamilies": [],
+                "payload": {
+                    "estimatedTitleFee": 1850.0,
+                    "estimatedSettlementFee": 950.0,
+                    "estimatedRecordingFee": 150.0,
+                    "estimatedSearchFee": 450.0,
+                    "estimatedMiscFee": 300.0,
+                    "estimatedTotalTitleCost": 3700.0,
+                    "currency": "USD",
+                    "profile": "title_quote_baseline",
+                },
+            },
+        )
         self.assertEqual(probe["called"], 0)
 
     def test_corelogic_scaffold_live_mode_without_allow_live_calls_is_blocked(self) -> None:
@@ -1153,6 +1204,27 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(scaffold.event_ref)
         self.assertIsNone(scaffold.mock_profile)
         self.assertIsNone(scaffold.mock_profile_label)
+        self.assertEqual(
+            scaffold.normalized_result,
+            {
+                "provider": "corelogic",
+                "mode": "live",
+                "executionState": "live_blocked",
+                "resultType": "blocked",
+                "artifactType": None,
+                "artifactId": None,
+                "traceKey": None,
+                "eventType": None,
+                "eventRef": None,
+                "quoteReference": None,
+                "snapshotVersion": None,
+                "warnings": [],
+                "warningCodes": [],
+                "warningSeverities": [],
+                "warningFamilies": [],
+                "payload": None,
+            },
+        )
 
     def test_corelogic_scaffold_live_mode_with_allow_live_calls_false_remains_blocked(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1175,6 +1247,9 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(scaffold.event_ref)
         self.assertIsNone(scaffold.mock_profile)
         self.assertIsNone(scaffold.mock_profile_label)
+        self.assertEqual(scaffold.normalized_result["executionState"], "live_blocked")
+        self.assertEqual(scaffold.normalized_result["resultType"], "blocked")
+        self.assertIsNone(scaffold.normalized_result["payload"])
 
     def test_corelogic_scaffold_live_mode_with_missing_credentials_remains_blocked(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1201,6 +1276,9 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(scaffold.event_ref)
         self.assertIsNone(scaffold.mock_profile)
         self.assertIsNone(scaffold.mock_profile_label)
+        self.assertEqual(scaffold.normalized_result["executionState"], "live_blocked")
+        self.assertEqual(scaffold.normalized_result["resultType"], "blocked")
+        self.assertIsNone(scaffold.normalized_result["payload"])
 
     def test_provenance_populates_mock_integration_enrichment_only_in_mock_mode(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1276,6 +1354,9 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertTrue(scaffold.live_ready)
         self.assertEqual(scaffold.live_ready_label, "Live Integration Ready")
         self.assertEqual(scaffold.guard_summary, "ready_for_live")
+        self.assertEqual(scaffold.normalized_result["executionState"], "not_executed")
+        self.assertEqual(scaffold.normalized_result["resultType"], "none")
+        self.assertIsNone(scaffold.normalized_result["payload"])
         self.assertEqual(probe["called"], 0)
 
 

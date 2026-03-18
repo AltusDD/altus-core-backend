@@ -45,6 +45,7 @@ class CoreLogicIntegrationScaffold:
     mock_profile: str | None
     mock_profile_label: str | None
     mock_payload: dict[str, Any] | None
+    normalized_result: dict[str, Any]
 
 
 def resolve_corelogic_integration_scaffold(
@@ -149,6 +150,17 @@ def _build_scaffold(
         mock_profile=_build_mock_profile(mode),
         mock_profile_label=_build_mock_profile_label(mode),
         mock_payload=mock_payload,
+        normalized_result=_build_normalized_result(
+            provider=CORELOGIC_PROVIDER_KEY,
+            mode=mode,
+            guard_summary=guard_summary,
+            artifact_type=_build_artifact_type(mode),
+            artifact_id=_build_artifact_id(mode),
+            trace_key=_build_trace_key(mode),
+            event_type=_build_event_type(mode),
+            event_ref=_build_event_ref(mode),
+            mock_payload=mock_payload,
+        ),
     )
 
 
@@ -183,10 +195,86 @@ def _ordered_unique_reason_codes(reason_codes: list[str]) -> list[str]:
 
 def _build_mock_payload() -> dict[str, Any]:
     return {
-        "provider": CORELOGIC_PROVIDER_KEY,
-        "mode": CORELOGIC_MODE_MOCK,
-        "state": CORELOGIC_STATE_MOCK_READY,
-        "propertyOverlay": "mock_static",
+        "estimatedTitleFee": 1850.0,
+        "estimatedSettlementFee": 950.0,
+        "estimatedRecordingFee": 150.0,
+        "estimatedSearchFee": 450.0,
+        "estimatedMiscFee": 300.0,
+        "estimatedTotalTitleCost": 3700.0,
+        "currency": "USD",
+        "profile": "title_quote_baseline",
+    }
+
+
+def _build_normalized_result(
+    *,
+    provider: str,
+    mode: str,
+    guard_summary: str,
+    artifact_type: str | None,
+    artifact_id: str | None,
+    trace_key: str | None,
+    event_type: str | None,
+    event_ref: str | None,
+    mock_payload: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if mode == CORELOGIC_MODE_MOCK:
+        return {
+            "provider": provider,
+            "mode": mode,
+            "executionState": "mock_executed",
+            "resultType": "mock_title_quote",
+            "artifactType": artifact_type,
+            "artifactId": artifact_id,
+            "traceKey": trace_key,
+            "eventType": event_type,
+            "eventRef": event_ref,
+            "quoteReference": "CORELOGIC-MOCK-QUOTE-001",
+            "snapshotVersion": "mock-v1",
+            "warnings": [],
+            "warningCodes": [],
+            "warningSeverities": [],
+            "warningFamilies": [],
+            "payload": mock_payload,
+        }
+
+    if guard_summary in {"blocked_live_calls_not_allowed", "blocked_missing_credentials"} and mode == CORELOGIC_MODE_LIVE:
+        return {
+            "provider": provider,
+            "mode": mode,
+            "executionState": "live_blocked",
+            "resultType": "blocked",
+            "artifactType": None,
+            "artifactId": None,
+            "traceKey": None,
+            "eventType": None,
+            "eventRef": None,
+            "quoteReference": None,
+            "snapshotVersion": None,
+            "warnings": [],
+            "warningCodes": [],
+            "warningSeverities": [],
+            "warningFamilies": [],
+            "payload": None,
+        }
+
+    return {
+        "provider": provider,
+        "mode": mode,
+        "executionState": "not_executed",
+        "resultType": "none",
+        "artifactType": None,
+        "artifactId": None,
+        "traceKey": None,
+        "eventType": None,
+        "eventRef": None,
+        "quoteReference": None,
+        "snapshotVersion": None,
+        "warnings": [],
+        "warningCodes": [],
+        "warningSeverities": [],
+        "warningFamilies": [],
+        "payload": None,
     }
 
 
