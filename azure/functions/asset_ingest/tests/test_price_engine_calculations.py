@@ -176,10 +176,14 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "sourceWarnings": [
                         "Stub response only. Vendor implementation remains disabled pending an approved API or documented embed bridge."
                     ],
-                    "sourceWarningCodes": [],
+                    "sourceWarningCodes": [
+                        "stub_provider_used",
+                    ],
                     "exportArtifactId": None,
                     "exportArtifactType": None,
                     "exportTraceKey": None,
+                    "sourceTraceKey": "stub:stub:stub",
+                    "snapshotTraceKey": None,
                 },
                 "scenario": {
                     "profile": "flip",
@@ -327,6 +331,8 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "exportArtifactId": "liberty-export-001",
                 "exportArtifactType": "title_quote_snapshot",
                 "exportTraceKey": "liberty:title_quote_snapshot:liberty-export-001",
+                "sourceTraceKey": "liberty:quoted:liberty_iframe_snapshot",
+                "snapshotTraceKey": "liberty:v1:LIA-QUOTE-001",
             },
         )
         self.assertEqual(metrics["Provenance"]["trace"]["generatedAt"], None)
@@ -402,6 +408,8 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "exportArtifactId": None,
                 "exportArtifactType": None,
                 "exportTraceKey": None,
+                "sourceTraceKey": "liberty:fallback_stub:liberty_iframe_snapshot",
+                "snapshotTraceKey": None,
             },
         )
 

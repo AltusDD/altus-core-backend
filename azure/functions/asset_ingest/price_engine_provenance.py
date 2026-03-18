@@ -21,6 +21,7 @@ def build_price_engine_provenance(
     )
     source_warnings = list(title_quote_context.warnings)
     source_warning_codes = _build_source_warning_codes(
+        provider=provider,
         status=status,
         source=source,
         snapshot_version=_string_or_none(title_quote_context.provider_context.get("snapshotVersion")),
@@ -32,6 +33,7 @@ def build_price_engine_provenance(
     export_artifact_id = _string_or_none(title_quote_context.provider_context.get("exportArtifactId"))
     export_artifact_type = _string_or_none(title_quote_context.provider_context.get("exportArtifactType"))
     quote_reference = title_quote_context.quote_reference
+    snapshot_version = _string_or_none(title_quote_context.provider_context.get("snapshotVersion"))
 
     return {
         "titleQuote": {
@@ -39,7 +41,7 @@ def build_price_engine_provenance(
             "status": status,
             "source": source,
             "quoteReference": quote_reference,
-            "snapshotVersion": _string_or_none(title_quote_context.provider_context.get("snapshotVersion")),
+            "snapshotVersion": snapshot_version,
             "quotedAt": _string_or_none(title_quote_context.provider_context.get("quotedAt")),
             "capturedAt": _string_or_none(title_quote_context.provider_context.get("capturedAt")),
             "expiresAt": title_quote_context.expires_at,
@@ -51,6 +53,16 @@ def build_price_engine_provenance(
                 provider=provider,
                 export_artifact_type=export_artifact_type,
                 export_artifact_id=export_artifact_id,
+                quote_reference=quote_reference,
+            ),
+            "sourceTraceKey": _build_source_trace_key(
+                provider=provider,
+                status=status,
+                source=source,
+            ),
+            "snapshotTraceKey": _build_snapshot_trace_key(
+                provider=provider,
+                snapshot_version=snapshot_version,
                 quote_reference=quote_reference,
             ),
         },
@@ -75,6 +87,7 @@ def _source_from_status(status: str) -> str:
 
 def _build_source_warning_codes(
     *,
+    provider: str,
     status: str,
     source: str,
     snapshot_version: str | None,
@@ -84,6 +97,9 @@ def _build_source_warning_codes(
     warnings: list[str],
 ) -> list[str]:
     codes: list[str] = []
+
+    if provider == "stub":
+        codes.append("stub_provider_used")
 
     if status == "fallback_stub":
         codes.append("fallback_stub_used")
@@ -122,6 +138,23 @@ def _build_export_trace_key(
         return f"{provider}:{export_artifact_type}:{export_artifact_id}"
     if quote_reference:
         return f"{provider}:quote:{quote_reference}"
+    return None
+
+
+def _build_source_trace_key(*, provider: str, status: str, source: str) -> str:
+    return f"{provider}:{status}:{source}"
+
+
+def _build_snapshot_trace_key(
+    *,
+    provider: str,
+    snapshot_version: str | None,
+    quote_reference: str | None,
+) -> str | None:
+    if snapshot_version and quote_reference:
+        return f"{provider}:{snapshot_version}:{quote_reference}"
+    if quote_reference:
+        return f"{provider}:snapshot:{quote_reference}"
     return None
 
 
