@@ -182,11 +182,25 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "sourceWarningSeverities": [
                         "info",
                     ],
+                    "warningSummary": {
+                        "highestSeverity": "info",
+                        "hasCritical": False,
+                        "hasWarning": False,
+                        "hasInfo": True,
+                    },
+                    "warningCounts": {
+                        "critical": 0,
+                        "warning": 0,
+                        "info": 1,
+                        "total": 1,
+                    },
                     "exportArtifactId": None,
                     "exportArtifactType": None,
                     "exportTraceKey": None,
                     "sourceTraceKey": "stub:stub:stub",
                     "snapshotTraceKey": None,
+                    "sourceEventRef": "source-event:stub:stub:stub",
+                    "snapshotEventRef": None,
                 },
                 "scenario": {
                     "profile": "flip",
@@ -334,11 +348,25 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "sourceWarningSeverities": [
                     "warning",
                 ],
+                "warningSummary": {
+                    "highestSeverity": "warning",
+                    "hasCritical": False,
+                    "hasWarning": True,
+                    "hasInfo": False,
+                },
+                "warningCounts": {
+                    "critical": 0,
+                    "warning": 1,
+                    "info": 0,
+                    "total": 1,
+                },
                 "exportArtifactId": "liberty-export-001",
                 "exportArtifactType": "title_quote_snapshot",
                 "exportTraceKey": "liberty:title_quote_snapshot:liberty-export-001",
                 "sourceTraceKey": "liberty:quoted:liberty_iframe_snapshot",
                 "snapshotTraceKey": "liberty:v1:LIA-QUOTE-001",
+                "sourceEventRef": "source-event:liberty:quoted:liberty_iframe_snapshot",
+                "snapshotEventRef": "snapshot-event:liberty:v1:LIA-QUOTE-001",
             },
         )
         self.assertEqual(metrics["Provenance"]["trace"]["generatedAt"], None)
@@ -415,11 +443,25 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "warning",
                     "critical",
                 ],
+                "warningSummary": {
+                    "highestSeverity": "critical",
+                    "hasCritical": True,
+                    "hasWarning": True,
+                    "hasInfo": False,
+                },
+                "warningCounts": {
+                    "critical": 1,
+                    "warning": 1,
+                    "info": 0,
+                    "total": 2,
+                },
                 "exportArtifactId": None,
                 "exportArtifactType": None,
                 "exportTraceKey": None,
                 "sourceTraceKey": "liberty:fallback_stub:liberty_iframe_snapshot",
                 "snapshotTraceKey": None,
+                "sourceEventRef": "source-event:liberty:fallback_stub:liberty_iframe_snapshot",
+                "snapshotEventRef": None,
             },
         )
 

@@ -34,10 +34,22 @@ def build_price_engine_provenance(
         _warning_code_severity(code)
         for code in source_warning_codes
     ]
+    warning_summary = _build_warning_summary(source_warning_severities)
+    warning_counts = _build_warning_counts(source_warning_severities)
     export_artifact_id = _string_or_none(title_quote_context.provider_context.get("exportArtifactId"))
     export_artifact_type = _string_or_none(title_quote_context.provider_context.get("exportArtifactType"))
     quote_reference = title_quote_context.quote_reference
     snapshot_version = _string_or_none(title_quote_context.provider_context.get("snapshotVersion"))
+    source_trace_key = _build_source_trace_key(
+        provider=provider,
+        status=status,
+        source=source,
+    )
+    snapshot_trace_key = _build_snapshot_trace_key(
+        provider=provider,
+        snapshot_version=snapshot_version,
+        quote_reference=quote_reference,
+    )
 
     return {
         "titleQuote": {
@@ -52,6 +64,8 @@ def build_price_engine_provenance(
             "sourceWarnings": source_warnings,
             "sourceWarningCodes": source_warning_codes,
             "sourceWarningSeverities": source_warning_severities,
+            "warningSummary": warning_summary,
+            "warningCounts": warning_counts,
             "exportArtifactId": export_artifact_id,
             "exportArtifactType": export_artifact_type,
             "exportTraceKey": _build_export_trace_key(
@@ -60,16 +74,10 @@ def build_price_engine_provenance(
                 export_artifact_id=export_artifact_id,
                 quote_reference=quote_reference,
             ),
-            "sourceTraceKey": _build_source_trace_key(
-                provider=provider,
-                status=status,
-                source=source,
-            ),
-            "snapshotTraceKey": _build_snapshot_trace_key(
-                provider=provider,
-                snapshot_version=snapshot_version,
-                quote_reference=quote_reference,
-            ),
+            "sourceTraceKey": source_trace_key,
+            "snapshotTraceKey": snapshot_trace_key,
+            "sourceEventRef": _build_event_ref("source-event", source_trace_key),
+            "snapshotEventRef": _build_event_ref("snapshot-event", snapshot_trace_key),
         },
         "scenario": {
             "profile": scenario_profile,
@@ -152,6 +160,38 @@ def _warning_code_severity(code: str) -> str:
     if code in {"fallback_stub_used", "liberty_iframe_no_backend_api"}:
         return "warning"
     return "info"
+
+
+def _build_warning_summary(severities: list[str]) -> dict[str, Any]:
+    highest_severity = None
+    if "critical" in severities:
+        highest_severity = "critical"
+    elif "warning" in severities:
+        highest_severity = "warning"
+    elif "info" in severities:
+        highest_severity = "info"
+
+    return {
+        "highestSeverity": highest_severity,
+        "hasCritical": "critical" in severities,
+        "hasWarning": "warning" in severities,
+        "hasInfo": "info" in severities,
+    }
+
+
+def _build_warning_counts(severities: list[str]) -> dict[str, int]:
+    return {
+        "critical": severities.count("critical"),
+        "warning": severities.count("warning"),
+        "info": severities.count("info"),
+        "total": len(severities),
+    }
+
+
+def _build_event_ref(prefix: str, trace_key: str | None) -> str | None:
+    if trace_key is None:
+        return None
+    return f"{prefix}:{trace_key}"
 
 
 def _build_source_trace_key(*, provider: str, status: str, source: str) -> str:
