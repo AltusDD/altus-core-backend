@@ -161,6 +161,24 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             "decision-support output only",
             metrics["Disclaimers"]["useDecision"]["message"],
         )
+        self.assertEqual(
+            metrics["Provenance"],
+            {
+                "titleQuote": {
+                    "provider": "stub",
+                    "status": "stub",
+                    "source": "stub",
+                },
+                "scenario": {
+                    "profile": "flip",
+                    "appliedPresetFields": [],
+                    "validationWarnings": [],
+                },
+                "trace": {
+                    "generatedAt": None,
+                },
+            },
+        )
 
     def test_service_applies_missing_preset_fields_without_overriding_explicit_values(self) -> None:
         os.environ.pop("PRICE_ENGINE_TITLE_RATE_PROVIDER", None)
@@ -204,6 +222,9 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertTrue(metrics["ValidationWarnings"])
         self.assertTrue(metrics["Disclaimers"]["calculation"]["warnings"])
         self.assertTrue(metrics["Disclaimers"]["useDecision"]["warnings"])
+        self.assertEqual(metrics["Provenance"]["scenario"]["profile"], "brrrr")
+        self.assertTrue(metrics["Provenance"]["scenario"]["appliedPresetFields"])
+        self.assertTrue(metrics["Provenance"]["scenario"]["validationWarnings"])
 
     def test_service_uses_liberty_quote_when_selected(self) -> None:
         os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
@@ -272,6 +293,15 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(metrics["ScenarioProfile"], "flip")
         self.assertEqual(metrics["AppliedPresetFields"], [])
         self.assertEqual(metrics["Disclaimers"]["dataSources"]["warnings"], [])
+        self.assertEqual(
+            metrics["Provenance"]["titleQuote"],
+            {
+                "provider": "liberty",
+                "status": "quoted",
+                "source": "liberty_iframe_snapshot",
+            },
+        )
+        self.assertEqual(metrics["Provenance"]["trace"]["generatedAt"], None)
 
     def test_service_amplifies_disclaimer_warning_when_liberty_fallback_stub_is_used(self) -> None:
         os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
@@ -322,6 +352,14 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(metrics["TotalTitleFees"], 0.0)
         self.assertTrue(metrics["Disclaimers"]["dataSources"]["warnings"])
         self.assertTrue(metrics["Disclaimers"]["useDecision"]["warnings"])
+        self.assertEqual(
+            metrics["Provenance"]["titleQuote"],
+            {
+                "provider": "liberty",
+                "status": "fallback_stub",
+                "source": "liberty_iframe_snapshot",
+            },
+        )
 
 
 if __name__ == "__main__":

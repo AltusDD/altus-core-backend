@@ -34,5 +34,20 @@
       "message": "This response is decision-support output only and must not be treated as legal, title, lending, appraisal, or investment advice or as a binding commitment.",
       "warnings": []
     }
+  },
+  "Provenance": {
+    "titleQuote": {
+      "provider": "stub",
+      "status": "stub",
+      "source": "stub"
+    },
+    "scenario": {
+      "profile": "flip",
+      "appliedPresetFields": [],
+      "validationWarnings": []
+    },
+    "trace": {
+      "generatedAt": null
+    }
   }
 }

@@ -137,6 +137,21 @@ Response shape:
       "message": "string",
       "warnings": []
     }
+  },
+  "Provenance": {
+    "titleQuote": {
+      "provider": "string",
+      "status": "string",
+      "source": "string"
+    },
+    "scenario": {
+      "profile": "string",
+      "appliedPresetFields": [],
+      "validationWarnings": []
+    },
+    "trace": {
+      "generatedAt": null
+    }
   }
 }
 ```
@@ -163,6 +178,13 @@ Notes:
 - `Disclaimers.calculation.warnings` is amplified when preset-backed defaults were used to fill missing or approximated underwriting inputs.
 - `Disclaimers.dataSources.warnings` is amplified when Liberty fallback stub title data is used instead of an approved Liberty snapshot.
 - `Disclaimers.useDecision.warnings` repeats any amplified assumptions that materially affect downstream reliance on the response.
+- `Provenance` is always present and contains canonical `titleQuote`, `scenario`, and `trace` metadata for the response.
+- `Provenance.titleQuote.provider` surfaces the normalized quote provider key such as `stub`, `liberty`, or `none`.
+- `Provenance.titleQuote.status` surfaces the normalized quote status such as `stub`, `quoted`, `fallback_stub`, or `not_requested`.
+- `Provenance.titleQuote.source` surfaces the canonical source path such as `stub`, `liberty_iframe_snapshot`, or `not_requested`.
+- `Provenance.scenario.profile` echoes the selected scenario profile.
+- `Provenance.scenario.appliedPresetFields` and `Provenance.scenario.validationWarnings` repeat the normalized assumption path used for the calculation.
+- `Provenance.trace.generatedAt` is returned as `null` in this slice to preserve deterministic responses while reserving the trace field for future additive timing metadata.
 - When no approved live title-rate provider is configured, or when Liberty quote retrieval is unavailable, the route uses the deterministic stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
 
 ## Error Contract
