@@ -17,5 +17,8 @@
   "GrossSaleProceeds": 225000.0,
   "TotalExitCosts": 23000.0,
   "ExitLoanPayoff": 100895.06,
-  "NetDispositionProceeds": 101104.94
+  "NetDispositionProceeds": 101104.94,
+  "ScenarioProfile": "flip",
+  "AppliedPresetFields": [],
+  "ValidationWarnings": []
 }

@@ -71,6 +71,28 @@ This document records the currently executable contract for the price engine cal
 - `rental_hold`
 - `brrrr`
 
+## Scenario Preset Rules
+
+- `flip`, `brrrr`, and `rental_hold` each provide deterministic default assumptions for hold duration, rate, debt-service mode, sale commission, seller closing cost rate, and target profit margin.
+- Presets only fill missing fields; explicit caller-provided values are preserved.
+- `ScenarioProfile` echoes the preset selected by `strategy`.
+- `AppliedPresetFields` records exactly which preset-backed fields were filled during normalization.
+
+## Canonical Validation Rules
+
+- `purchasePrice >= 0`
+- `afterRepairValue >= 0`
+- `exitSalePrice >= 0` when provided
+- `loanAmount >= 0` when provided
+- `loanOriginationFee`, `underwritingFee`, `processingFee`, `appraisalFee`, `creditReportFee`, `points`, `closingCosts`, `holdingCosts`, `rehabCost`, `cashAvailable`, `rentMonthly`, `operatingExpenseMonthly`, `dispositionFee`, `sellerConcessions`, `otherExitCosts`, and `reserves` must be non-negative when provided
+- `annualInterestRate` must be between `0` and `1`
+- `interestRateAnnual` must be between `0` and `1`
+- `saleCommissionRate` must be between `0` and `1`
+- `sellerClosingCostRate` must be between `0` and `1`
+- `pointsRate` must be between `0` and `0.25`
+- `holdingMonths` must be greater than `0` when provided
+- `amortizationMonths` must be greater than `0` when provided
+
 ## Success Contract
 
 Status code:
@@ -98,7 +120,10 @@ Response shape:
   "GrossSaleProceeds": 0.0,
   "TotalExitCosts": 0.0,
   "ExitLoanPayoff": 0.0,
-  "NetDispositionProceeds": 0.0
+  "NetDispositionProceeds": 0.0,
+  "ScenarioProfile": "flip",
+  "AppliedPresetFields": [],
+  "ValidationWarnings": []
 }
 ```
 
@@ -121,6 +146,9 @@ Notes:
 - `TotalExitCosts` normalizes sale commission, seller closing costs, disposition fee, seller concessions, and other exit costs into one canonical disposition stack.
 - `ExitLoanPayoff` is the financed principal payoff required at disposition after carry normalization.
 - `NetDispositionProceeds` is `GrossSaleProceeds - TotalExitCosts - ExitLoanPayoff`.
+- `ScenarioProfile` echoes the canonical preset profile used for normalization.
+- `AppliedPresetFields` lists preset-backed fields that were filled because the caller omitted them.
+- `ValidationWarnings` is reserved for non-fatal normalization notices and is empty in this slice.
 - When no approved live title-rate provider is configured, the route uses the existing stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
 
 ## Error Contract
