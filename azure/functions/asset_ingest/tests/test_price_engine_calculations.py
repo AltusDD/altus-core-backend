@@ -302,6 +302,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "integrationPayloadProfile": None,
                     "integrationEstimatedTotalTitleCost": None,
                     "integrationCurrency": None,
+                    "integrationEstimatedTitleFee": None,
+                    "integrationEstimatedSettlementFee": None,
+                    "integrationEstimatedRecordingFee": None,
+                    "integrationEstimatedSearchFee": None,
+                    "integrationEstimatedMiscFee": None,
                     "exportReadiness": "blocked",
                     "exportReadinessLabel": "Export Blocked",
                     "exportReadinessReasonCodes": [
@@ -539,6 +544,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "integrationPayloadProfile": None,
                 "integrationEstimatedTotalTitleCost": None,
                 "integrationCurrency": None,
+                "integrationEstimatedTitleFee": None,
+                "integrationEstimatedSettlementFee": None,
+                "integrationEstimatedRecordingFee": None,
+                "integrationEstimatedSearchFee": None,
+                "integrationEstimatedMiscFee": None,
                 "exportReadiness": "conditional",
                 "exportReadinessLabel": "Conditionally Export Ready",
                 "exportReadinessReasonCodes": [
@@ -701,6 +711,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "integrationPayloadProfile": None,
                 "integrationEstimatedTotalTitleCost": None,
                 "integrationCurrency": None,
+                "integrationEstimatedTitleFee": None,
+                "integrationEstimatedSettlementFee": None,
+                "integrationEstimatedRecordingFee": None,
+                "integrationEstimatedSearchFee": None,
+                "integrationEstimatedMiscFee": None,
                 "exportReadiness": "blocked",
                 "exportReadinessLabel": "Export Blocked",
                 "exportReadinessReasonCodes": [
@@ -773,6 +788,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationPayloadProfile"])
         self.assertIsNone(provenance["titleQuote"]["integrationEstimatedTotalTitleCost"])
         self.assertIsNone(provenance["titleQuote"]["integrationCurrency"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedTitleFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedSettlementFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedRecordingFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedSearchFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedMiscFee"])
 
     def test_source_event_bundle_status_is_missing_when_no_events_exist(self) -> None:
         provenance = build_price_engine_provenance(
@@ -830,6 +850,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationPayloadProfile"])
         self.assertIsNone(provenance["titleQuote"]["integrationEstimatedTotalTitleCost"])
         self.assertIsNone(provenance["titleQuote"]["integrationCurrency"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedTitleFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedSettlementFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedRecordingFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedSearchFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedMiscFee"])
 
     def test_warning_family_display_priority_honors_exact_priority_order(self) -> None:
         provenance = build_price_engine_provenance(
@@ -1360,6 +1385,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(provenance["titleQuote"]["integrationPayloadProfile"], "title_quote_baseline")
         self.assertEqual(provenance["titleQuote"]["integrationEstimatedTotalTitleCost"], 3700.0)
         self.assertEqual(provenance["titleQuote"]["integrationCurrency"], "USD")
+        self.assertEqual(provenance["titleQuote"]["integrationEstimatedTitleFee"], 1850.0)
+        self.assertEqual(provenance["titleQuote"]["integrationEstimatedSettlementFee"], 950.0)
+        self.assertEqual(provenance["titleQuote"]["integrationEstimatedRecordingFee"], 150.0)
+        self.assertEqual(provenance["titleQuote"]["integrationEstimatedSearchFee"], 450.0)
+        self.assertEqual(provenance["titleQuote"]["integrationEstimatedMiscFee"], 300.0)
 
     def test_corelogic_scaffold_live_mode_with_partial_credentials_reports_partial_state(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1400,6 +1430,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationPayloadProfile"])
         self.assertIsNone(provenance["titleQuote"]["integrationEstimatedTotalTitleCost"])
         self.assertIsNone(provenance["titleQuote"]["integrationCurrency"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedTitleFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedSettlementFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedRecordingFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedSearchFee"])
+        self.assertIsNone(provenance["titleQuote"]["integrationEstimatedMiscFee"])
 
     def test_corelogic_scaffold_live_mode_with_all_credentials_present_reports_ready_state(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1475,6 +1510,26 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(
             provenance["titleQuote"]["integrationCurrency"],
             scaffold.normalized_result["payload"]["currency"],
+        )
+        self.assertEqual(
+            provenance["titleQuote"]["integrationEstimatedTitleFee"],
+            scaffold.normalized_result["payload"]["estimatedTitleFee"],
+        )
+        self.assertEqual(
+            provenance["titleQuote"]["integrationEstimatedSettlementFee"],
+            scaffold.normalized_result["payload"]["estimatedSettlementFee"],
+        )
+        self.assertEqual(
+            provenance["titleQuote"]["integrationEstimatedRecordingFee"],
+            scaffold.normalized_result["payload"]["estimatedRecordingFee"],
+        )
+        self.assertEqual(
+            provenance["titleQuote"]["integrationEstimatedSearchFee"],
+            scaffold.normalized_result["payload"]["estimatedSearchFee"],
+        )
+        self.assertEqual(
+            provenance["titleQuote"]["integrationEstimatedMiscFee"],
+            scaffold.normalized_result["payload"]["estimatedMiscFee"],
         )
 
 

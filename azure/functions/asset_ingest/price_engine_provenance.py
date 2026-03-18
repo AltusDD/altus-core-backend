@@ -184,6 +184,26 @@ def build_price_engine_provenance(
                 corelogic_integration.normalized_result,
                 "currency",
             ),
+            "integrationEstimatedTitleFee": _integration_payload_bridge_value(
+                corelogic_integration.normalized_result,
+                "estimatedTitleFee",
+            ),
+            "integrationEstimatedSettlementFee": _integration_payload_bridge_value(
+                corelogic_integration.normalized_result,
+                "estimatedSettlementFee",
+            ),
+            "integrationEstimatedRecordingFee": _integration_payload_bridge_value(
+                corelogic_integration.normalized_result,
+                "estimatedRecordingFee",
+            ),
+            "integrationEstimatedSearchFee": _integration_payload_bridge_value(
+                corelogic_integration.normalized_result,
+                "estimatedSearchFee",
+            ),
+            "integrationEstimatedMiscFee": _integration_payload_bridge_value(
+                corelogic_integration.normalized_result,
+                "estimatedMiscFee",
+            ),
             "exportReadiness": export_readiness,
             "exportReadinessLabel": _build_export_readiness_label(export_readiness),
             "exportReadinessReasonCodes": export_readiness_reason_codes,

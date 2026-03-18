@@ -131,6 +131,11 @@
       "integrationPayloadProfile": null,
       "integrationEstimatedTotalTitleCost": null,
       "integrationCurrency": null,
+      "integrationEstimatedTitleFee": null,
+      "integrationEstimatedSettlementFee": null,
+      "integrationEstimatedRecordingFee": null,
+      "integrationEstimatedSearchFee": null,
+      "integrationEstimatedMiscFee": null,
       "exportReadiness": "blocked",
       "exportReadinessLabel": "Export Blocked",
       "exportReadinessReasonCodes": [
