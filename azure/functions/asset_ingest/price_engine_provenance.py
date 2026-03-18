@@ -30,6 +30,10 @@ def build_price_engine_provenance(
         captured_at=_string_or_none(title_quote_context.provider_context.get("capturedAt")),
         warnings=source_warnings,
     )
+    source_warning_severities = [
+        _warning_code_severity(code)
+        for code in source_warning_codes
+    ]
     export_artifact_id = _string_or_none(title_quote_context.provider_context.get("exportArtifactId"))
     export_artifact_type = _string_or_none(title_quote_context.provider_context.get("exportArtifactType"))
     quote_reference = title_quote_context.quote_reference
@@ -47,6 +51,7 @@ def build_price_engine_provenance(
             "expiresAt": title_quote_context.expires_at,
             "sourceWarnings": source_warnings,
             "sourceWarningCodes": source_warning_codes,
+            "sourceWarningSeverities": source_warning_severities,
             "exportArtifactId": export_artifact_id,
             "exportArtifactType": export_artifact_type,
             "exportTraceKey": _build_export_trace_key(
@@ -139,6 +144,14 @@ def _build_export_trace_key(
     if quote_reference:
         return f"{provider}:quote:{quote_reference}"
     return None
+
+
+def _warning_code_severity(code: str) -> str:
+    if code in {"snapshot_missing_required_fields", "snapshot_expired", "quote_source_unavailable"}:
+        return "critical"
+    if code in {"fallback_stub_used", "liberty_iframe_no_backend_api"}:
+        return "warning"
+    return "info"
 
 
 def _build_source_trace_key(*, provider: str, status: str, source: str) -> str:

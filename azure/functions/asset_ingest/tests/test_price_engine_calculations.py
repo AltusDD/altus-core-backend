@@ -179,6 +179,9 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "sourceWarningCodes": [
                         "stub_provider_used",
                     ],
+                    "sourceWarningSeverities": [
+                        "info",
+                    ],
                     "exportArtifactId": None,
                     "exportArtifactType": None,
                     "exportTraceKey": None,
@@ -328,6 +331,9 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "sourceWarningCodes": [
                     "liberty_iframe_no_backend_api",
                 ],
+                "sourceWarningSeverities": [
+                    "warning",
+                ],
                 "exportArtifactId": "liberty-export-001",
                 "exportArtifactType": "title_quote_snapshot",
                 "exportTraceKey": "liberty:title_quote_snapshot:liberty-export-001",
@@ -404,6 +410,10 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "sourceWarningCodes": [
                     "fallback_stub_used",
                     "quote_source_unavailable",
+                ],
+                "sourceWarningSeverities": [
+                    "warning",
+                    "critical",
                 ],
                 "exportArtifactId": None,
                 "exportArtifactType": None,

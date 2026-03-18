@@ -51,6 +51,9 @@
       "sourceWarningCodes": [
         "stub_provider_used"
       ],
+      "sourceWarningSeverities": [
+        "info"
+      ],
       "exportArtifactId": null,
       "exportArtifactType": null,
       "exportTraceKey": null,
