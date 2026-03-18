@@ -21,7 +21,9 @@ from price_engine_calculations import (  # noqa: E402
     calculate_total_title_fees,
     calculate_total_transaction_costs,
 )
+from price_engine_provenance import build_price_engine_provenance  # noqa: E402
 from price_engine_service import calculate_price_engine  # noqa: E402
+from price_engine_title_quote_context import PriceEngineTitleQuoteContext  # noqa: E402
 
 
 class PriceEngineCalculationsTests(unittest.TestCase):
@@ -222,6 +224,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                         "sourceEventRef": "source-event:stub:stub:stub",
                         "snapshotEventType": None,
                         "snapshotEventRef": None,
+                        "status": "partial",
+                        "statusLabel": "Partial Event Bundle",
+                        "hasSourceEvent": True,
+                        "hasSnapshotEvent": False,
+                        "isComplete": False,
                     },
                 },
                 "scenario": {
@@ -410,6 +417,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "sourceEventRef": "source-event:liberty:quoted:liberty_iframe_snapshot",
                     "snapshotEventType": "title_quote_snapshot",
                     "snapshotEventRef": "snapshot-event:liberty:v1:LIA-QUOTE-001",
+                    "status": "complete",
+                    "statusLabel": "Complete Event Bundle",
+                    "hasSourceEvent": True,
+                    "hasSnapshotEvent": True,
+                    "isComplete": True,
                 },
             },
         )
@@ -529,7 +541,78 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "sourceEventRef": "source-event:liberty:fallback_stub:liberty_iframe_snapshot",
                     "snapshotEventType": None,
                     "snapshotEventRef": None,
+                    "status": "partial",
+                    "statusLabel": "Partial Event Bundle",
+                    "hasSourceEvent": True,
+                    "hasSnapshotEvent": False,
+                    "isComplete": False,
                 },
+            },
+        )
+
+    def test_source_event_bundle_status_is_partial_when_only_snapshot_event_exists(self) -> None:
+        provenance = build_price_engine_provenance(
+            title_quote_context=PriceEngineTitleQuoteContext(
+                fee_inputs={},
+                provider_key="liberty",
+                status="not_requested",
+                quote_reference="LIA-QUOTE-ONLY",
+                expires_at=None,
+                warnings=[],
+                assumptions=[],
+                provider_context={
+                    "snapshotVersion": "v1",
+                },
+            ),
+            scenario_profile="flip",
+            applied_preset_fields=[],
+            validation_warnings=[],
+        )
+
+        self.assertEqual(
+            provenance["titleQuote"]["sourceEventBundle"],
+            {
+                "sourceEventType": None,
+                "sourceEventRef": None,
+                "snapshotEventType": "title_quote_snapshot",
+                "snapshotEventRef": "snapshot-event:liberty:v1:LIA-QUOTE-ONLY",
+                "status": "partial",
+                "statusLabel": "Partial Event Bundle",
+                "hasSourceEvent": False,
+                "hasSnapshotEvent": True,
+                "isComplete": False,
+            },
+        )
+
+    def test_source_event_bundle_status_is_missing_when_no_events_exist(self) -> None:
+        provenance = build_price_engine_provenance(
+            title_quote_context=PriceEngineTitleQuoteContext(
+                fee_inputs={},
+                provider_key=None,
+                status="not_requested",
+                quote_reference=None,
+                expires_at=None,
+                warnings=[],
+                assumptions=[],
+                provider_context={},
+            ),
+            scenario_profile="flip",
+            applied_preset_fields=[],
+            validation_warnings=[],
+        )
+
+        self.assertEqual(
+            provenance["titleQuote"]["sourceEventBundle"],
+            {
+                "sourceEventType": None,
+                "sourceEventRef": None,
+                "snapshotEventType": None,
+                "snapshotEventRef": None,
+                "status": "missing",
+                "statusLabel": "Missing Event Bundle",
+                "hasSourceEvent": False,
+                "hasSnapshotEvent": False,
+                "isComplete": False,
             },
         )
 

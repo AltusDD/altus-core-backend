@@ -58,6 +58,12 @@ def build_price_engine_provenance(
     snapshot_event_type = _build_snapshot_event_type(snapshot_trace_key=snapshot_trace_key)
     source_event_ref = _build_event_ref("source-event", source_trace_key)
     snapshot_event_ref = _build_event_ref("snapshot-event", snapshot_trace_key)
+    source_event_bundle = _build_source_event_bundle(
+        source_event_type=source_event_type,
+        source_event_ref=source_event_ref,
+        snapshot_event_type=snapshot_event_type,
+        snapshot_event_ref=snapshot_event_ref,
+    )
 
     return {
         "titleQuote": {
@@ -92,12 +98,7 @@ def build_price_engine_provenance(
             "snapshotEventType": snapshot_event_type,
             "sourceEventRef": source_event_ref,
             "snapshotEventRef": snapshot_event_ref,
-            "sourceEventBundle": {
-                "sourceEventType": source_event_type,
-                "sourceEventRef": source_event_ref,
-                "snapshotEventType": snapshot_event_type,
-                "snapshotEventRef": snapshot_event_ref,
-            },
+            "sourceEventBundle": source_event_bundle,
         },
         "scenario": {
             "profile": scenario_profile,
@@ -249,6 +250,56 @@ def _build_event_ref(prefix: str, trace_key: str | None) -> str | None:
     if trace_key is None:
         return None
     return f"{prefix}:{trace_key}"
+
+
+def _build_source_event_bundle(
+    *,
+    source_event_type: str | None,
+    source_event_ref: str | None,
+    snapshot_event_type: str | None,
+    snapshot_event_ref: str | None,
+) -> dict[str, Any]:
+    normalized_source_event_ref = source_event_ref if source_event_type else None
+    normalized_snapshot_event_ref = snapshot_event_ref if snapshot_event_type else None
+    has_source_event = _has_event(source_event_type, normalized_source_event_ref)
+    has_snapshot_event = _has_event(snapshot_event_type, normalized_snapshot_event_ref)
+    is_complete = has_source_event and has_snapshot_event
+    status = _build_event_bundle_status(
+        has_source_event=has_source_event,
+        has_snapshot_event=has_snapshot_event,
+    )
+
+    return {
+        "sourceEventType": source_event_type,
+        "sourceEventRef": normalized_source_event_ref,
+        "snapshotEventType": snapshot_event_type,
+        "snapshotEventRef": normalized_snapshot_event_ref,
+        "status": status,
+        "statusLabel": _build_event_bundle_status_label(status),
+        "hasSourceEvent": has_source_event,
+        "hasSnapshotEvent": has_snapshot_event,
+        "isComplete": is_complete,
+    }
+
+
+def _has_event(event_type: str | None, event_ref: str | None) -> bool:
+    return bool(event_type and event_type.strip() and event_ref and event_ref.strip())
+
+
+def _build_event_bundle_status(*, has_source_event: bool, has_snapshot_event: bool) -> str:
+    if has_source_event and has_snapshot_event:
+        return "complete"
+    if has_source_event or has_snapshot_event:
+        return "partial"
+    return "missing"
+
+
+def _build_event_bundle_status_label(status: str) -> str:
+    if status == "complete":
+        return "Complete Event Bundle"
+    if status == "partial":
+        return "Partial Event Bundle"
+    return "Missing Event Bundle"
 
 
 def _build_source_event_type(*, status: str) -> str | None:

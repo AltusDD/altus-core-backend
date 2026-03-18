@@ -93,7 +93,12 @@
         "sourceEventType": "title_quote_stub",
         "sourceEventRef": "source-event:stub:stub:stub",
         "snapshotEventType": null,
-        "snapshotEventRef": null
+        "snapshotEventRef": null,
+        "status": "partial",
+        "statusLabel": "Partial Event Bundle",
+        "hasSourceEvent": true,
+        "hasSnapshotEvent": false,
+        "isComplete": false
       }
     },
     "scenario": {

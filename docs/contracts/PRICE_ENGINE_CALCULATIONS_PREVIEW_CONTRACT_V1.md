@@ -186,7 +186,12 @@ Response shape:
         "sourceEventType": "string",
         "sourceEventRef": "string",
         "snapshotEventType": null,
-        "snapshotEventRef": null
+        "snapshotEventRef": null,
+        "status": "partial",
+        "statusLabel": "Partial Event Bundle",
+        "hasSourceEvent": true,
+        "hasSnapshotEvent": false,
+        "isComplete": false
       }
     },
     "scenario": {
@@ -245,6 +250,11 @@ Notes:
 - `Provenance.titleQuote.sourceEventType` and `snapshotEventType` surface deterministic event labels derived from the normalized status and snapshot availability.
 - `Provenance.titleQuote.sourceEventRef` and `snapshotEventRef` surface audit-safe event-style references derived only from the existing normalized source and snapshot trace keys.
 - `Provenance.titleQuote.sourceEventBundle` groups the current source and snapshot event labels plus refs into one compact deterministic object for downstream display and filtering.
+- `Provenance.titleQuote.sourceEventBundle.hasSourceEvent` is `true` only when both `sourceEventType` and `sourceEventRef` are present and non-empty.
+- `Provenance.titleQuote.sourceEventBundle.hasSnapshotEvent` is `true` only when both `snapshotEventType` and `snapshotEventRef` are present and non-empty.
+- `Provenance.titleQuote.sourceEventBundle.isComplete` is `true` only when both source and snapshot events are present.
+- `Provenance.titleQuote.sourceEventBundle.status` is `complete`, `partial`, or `missing`, derived only from source/snapshot event presence.
+- `Provenance.titleQuote.sourceEventBundle.statusLabel` is derived only from `status` using `Complete Event Bundle`, `Partial Event Bundle`, or `Missing Event Bundle`.
 - `Provenance.scenario.profile` echoes the selected scenario profile.
 - `Provenance.scenario.appliedPresetFields` and `Provenance.scenario.validationWarnings` repeat the normalized assumption path used for the calculation.
 - `Provenance.trace.generatedAt` is returned as `null` in this slice to preserve deterministic responses while reserving the trace field for future additive timing metadata.
