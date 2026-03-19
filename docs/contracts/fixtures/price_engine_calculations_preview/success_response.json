@@ -172,6 +172,11 @@
       "integrationOperatorSnapshotSeverity": null,
       "integrationOperatorSnapshotOrder": null,
       "integrationOperatorSnapshotReasonCodes": null,
+      "integrationOperatorCardStatus": null,
+      "integrationOperatorCardLabel": null,
+      "integrationOperatorCardSeverity": null,
+      "integrationOperatorCardOrder": null,
+      "integrationOperatorCardReasonCodes": null,
       "exportReadiness": "blocked",
       "exportReadinessLabel": "Export Blocked",
       "exportReadinessReasonCodes": [

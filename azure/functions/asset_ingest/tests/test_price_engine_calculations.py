@@ -33,6 +33,10 @@ from price_engine_provenance import (  # noqa: E402
     _build_integration_operator_action_blocking,
     _build_integration_operator_action_priority,
     _build_integration_operator_action_reason_codes,
+    _build_integration_operator_card_order,
+    _build_integration_operator_card_reason_codes,
+    _build_integration_operator_card_severity,
+    _build_integration_operator_card_status,
     _build_integration_operator_snapshot_order,
     _build_integration_operator_snapshot_reason_codes,
     _build_integration_operator_snapshot_severity,
@@ -362,6 +366,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "integrationOperatorSnapshotSeverity": None,
                     "integrationOperatorSnapshotOrder": None,
                     "integrationOperatorSnapshotReasonCodes": None,
+                    "integrationOperatorCardStatus": None,
+                    "integrationOperatorCardLabel": None,
+                    "integrationOperatorCardSeverity": None,
+                    "integrationOperatorCardOrder": None,
+                    "integrationOperatorCardReasonCodes": None,
                     "exportReadiness": "blocked",
                     "exportReadinessLabel": "Export Blocked",
                     "exportReadinessReasonCodes": [
@@ -640,6 +649,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "integrationOperatorSnapshotSeverity": None,
                 "integrationOperatorSnapshotOrder": None,
                 "integrationOperatorSnapshotReasonCodes": None,
+                "integrationOperatorCardStatus": None,
+                "integrationOperatorCardLabel": None,
+                "integrationOperatorCardSeverity": None,
+                "integrationOperatorCardOrder": None,
+                "integrationOperatorCardReasonCodes": None,
                 "exportReadiness": "conditional",
                 "exportReadinessLabel": "Conditionally Export Ready",
                 "exportReadinessReasonCodes": [
@@ -843,6 +857,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "integrationOperatorSnapshotSeverity": None,
                 "integrationOperatorSnapshotOrder": None,
                 "integrationOperatorSnapshotReasonCodes": None,
+                "integrationOperatorCardStatus": None,
+                "integrationOperatorCardLabel": None,
+                "integrationOperatorCardSeverity": None,
+                "integrationOperatorCardOrder": None,
+                "integrationOperatorCardReasonCodes": None,
                 "exportReadiness": "blocked",
                 "exportReadinessLabel": "Export Blocked",
                 "exportReadinessReasonCodes": [
@@ -956,6 +975,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotSeverity"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotOrder"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotReasonCodes"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardStatus"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardLabel"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardSeverity"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardOrder"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardReasonCodes"])
 
     def test_source_event_bundle_status_is_missing_when_no_events_exist(self) -> None:
         provenance = build_price_engine_provenance(
@@ -1054,6 +1078,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotSeverity"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotOrder"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotReasonCodes"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardStatus"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardLabel"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardSeverity"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardOrder"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardReasonCodes"])
 
     def test_warning_family_display_priority_honors_exact_priority_order(self) -> None:
         provenance = build_price_engine_provenance(
@@ -1628,6 +1657,14 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             provenance["titleQuote"]["integrationOperatorSnapshotReasonCodes"],
             ["snapshot_monitor_only"],
         )
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardStatus"], "monitor")
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardLabel"], "Operator Card Monitor")
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardSeverity"], "info")
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardOrder"], 4)
+        self.assertEqual(
+            provenance["titleQuote"]["integrationOperatorCardReasonCodes"],
+            ["card_monitor_only"],
+        )
 
     def test_corelogic_scaffold_live_mode_with_partial_credentials_reports_partial_state(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1709,6 +1746,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotSeverity"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotOrder"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorSnapshotReasonCodes"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardStatus"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardLabel"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardSeverity"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardOrder"])
+        self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardReasonCodes"])
 
     def test_corelogic_scaffold_live_mode_with_all_credentials_present_reports_ready_state(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -2125,6 +2167,14 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             provenance["titleQuote"]["integrationOperatorSnapshotReasonCodes"],
             ["snapshot_export_blocked"],
         )
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardStatus"], "blocked")
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardLabel"], "Operator Card Blocked")
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardSeverity"], "critical")
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardOrder"], 1)
+        self.assertEqual(
+            provenance["titleQuote"]["integrationOperatorCardReasonCodes"],
+            ["card_export_blocked"],
+        )
 
     def test_integration_summary_degrades_to_conditional_when_export_is_conditional(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -2184,6 +2234,17 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(
             provenance["titleQuote"]["integrationOperatorSnapshotReasonCodes"],
             ["snapshot_export_conditional"],
+        )
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardStatus"], "conditional")
+        self.assertEqual(
+            provenance["titleQuote"]["integrationOperatorCardLabel"],
+            "Operator Card Conditional",
+        )
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardSeverity"], "warning")
+        self.assertEqual(provenance["titleQuote"]["integrationOperatorCardOrder"], 2)
+        self.assertEqual(
+            provenance["titleQuote"]["integrationOperatorCardReasonCodes"],
+            ["card_export_conditional"],
         )
 
     def test_integration_summary_priority_can_classify_audit_partial(self) -> None:
@@ -2261,6 +2322,25 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(
             _build_integration_operator_snapshot_reason_codes("review"),
             ["snapshot_review_required"],
+        )
+        self.assertEqual(
+            _build_integration_operator_card_status(
+                integration_mode="mock",
+                integration_execution_state="mock_executed",
+                integration_export_readiness="ready",
+                integration_audit_completeness="partial",
+                integration_operator_action="complete_audit_data",
+                integration_operator_action_blocking=False,
+                integration_operator_snapshot_status="review",
+                integration_fee_reconciliation_status="matched",
+            ),
+            "review",
+        )
+        self.assertEqual(_build_integration_operator_card_severity("review"), "warning")
+        self.assertEqual(_build_integration_operator_card_order("review"), 3)
+        self.assertEqual(
+            _build_integration_operator_card_reason_codes("review"),
+            ["card_review_required"],
         )
 
     def test_integration_summary_priority_can_classify_audit_minimal(self) -> None:
@@ -2353,6 +2433,25 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             _build_integration_operator_snapshot_reason_codes("ready"),
             ["snapshot_ready"],
         )
+        self.assertEqual(
+            _build_integration_operator_card_status(
+                integration_mode="live",
+                integration_execution_state="mock_executed",
+                integration_export_readiness="ready",
+                integration_audit_completeness="complete",
+                integration_operator_action="ready_no_action",
+                integration_operator_action_blocking=False,
+                integration_operator_snapshot_status="ready",
+                integration_fee_reconciliation_status="matched",
+            ),
+            "ready",
+        )
+        self.assertEqual(_build_integration_operator_card_severity("ready"), "info")
+        self.assertEqual(_build_integration_operator_card_order("ready"), 5)
+        self.assertEqual(
+            _build_integration_operator_card_reason_codes("ready"),
+            ["card_ready"],
+        )
 
     def test_integration_operator_action_prioritizes_fee_mismatch(self) -> None:
         self.assertEqual(
@@ -2381,6 +2480,19 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 integration_operator_action_blocking=True,
                 integration_export_readiness="ready",
                 integration_audit_completeness="complete",
+                integration_fee_reconciliation_status="mismatched",
+            ),
+            "review",
+        )
+        self.assertEqual(
+            _build_integration_operator_card_status(
+                integration_mode="mock",
+                integration_execution_state="mock_executed",
+                integration_export_readiness="ready",
+                integration_audit_completeness="complete",
+                integration_operator_action="review_fee_mismatch",
+                integration_operator_action_blocking=True,
+                integration_operator_snapshot_status="review",
                 integration_fee_reconciliation_status="mismatched",
             ),
             "review",

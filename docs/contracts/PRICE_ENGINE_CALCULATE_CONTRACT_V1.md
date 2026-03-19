@@ -262,6 +262,11 @@ Response shape:
       "integrationOperatorSnapshotSeverity": null,
       "integrationOperatorSnapshotOrder": null,
       "integrationOperatorSnapshotReasonCodes": null,
+      "integrationOperatorCardStatus": null,
+      "integrationOperatorCardLabel": null,
+      "integrationOperatorCardSeverity": null,
+      "integrationOperatorCardOrder": null,
+      "integrationOperatorCardReasonCodes": null,
       "exportReadiness": "blocked",
       "exportReadinessLabel": "Export Blocked",
       "exportReadinessReasonCodes": [],
@@ -368,6 +373,8 @@ Notes:
 - In `mock` mode, those operator-action fields resolve deterministically to `monitor_mock_state`, `Monitor Mock State`, `5`, `["operator_mock_monitor"]`, and `false`.
 - `Provenance.titleQuote.integrationOperatorSnapshotStatus`, `integrationOperatorSnapshotLabel`, `integrationOperatorSnapshotSeverity`, `integrationOperatorSnapshotOrder`, and `integrationOperatorSnapshotReasonCodes` are derived only from the existing route-visible CoreLogic integration operator-action, export, audit, display, and fee-reconciliation fields and remain `null` unless an integration execution envelope exists.
 - In `mock` mode, those operator-snapshot fields resolve deterministically to `monitor`, `Operator Snapshot Monitor`, `info`, `4`, and `["snapshot_monitor_only"]`.
+- `Provenance.titleQuote.integrationOperatorCardStatus`, `integrationOperatorCardLabel`, `integrationOperatorCardSeverity`, `integrationOperatorCardOrder`, and `integrationOperatorCardReasonCodes` are derived only from the existing route-visible CoreLogic integration operator snapshot, action, export, audit, and fee-reconciliation fields and remain `null` unless an integration execution envelope exists.
+- In `mock` mode, those operator-card fields resolve deterministically to `monitor`, `Operator Card Monitor`, `info`, `4`, and `["card_monitor_only"]`.
 - `Provenance.titleQuote.exportReadiness` is `ready`, `conditional`, or `blocked`, derived only from deterministic provenance completeness and warning-state checks.
 - `Provenance.titleQuote.exportReadinessLabel` is derived only from `exportReadiness` using `Export Ready`, `Conditionally Export Ready`, or `Export Blocked`.
 - `Provenance.titleQuote.exportReadinessReasonCodes` surfaces unique deterministic reason codes in fixed order from this set only: `missing_export_artifact`, `missing_export_trace`, `missing_quote_reference`, `missing_snapshot_version`, `missing_source_trace`, `missing_snapshot_trace`, `missing_source_event`, `missing_snapshot_event`, `critical_warning_present`, and `warning_present`.

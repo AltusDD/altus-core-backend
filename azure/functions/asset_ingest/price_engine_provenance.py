@@ -276,6 +276,18 @@ def build_price_engine_provenance(
         integration_audit_completeness=integration_audit_completeness,
         integration_fee_reconciliation_status=integration_fee_reconciliation_status,
     )
+    integration_operator_card_status = _build_integration_operator_card_status(
+        integration_mode=corelogic_integration.mode,
+        integration_execution_state=integration_execution_state,
+        integration_export_readiness=integration_export_readiness,
+        integration_audit_completeness=integration_audit_completeness,
+        integration_operator_action=integration_operator_action,
+        integration_operator_action_blocking=_build_integration_operator_action_blocking(
+            integration_operator_action,
+        ),
+        integration_operator_snapshot_status=integration_operator_snapshot_status,
+        integration_fee_reconciliation_status=integration_fee_reconciliation_status,
+    )
 
     return {
         "titleQuote": {
@@ -416,6 +428,19 @@ def build_price_engine_provenance(
             ),
             "integrationOperatorSnapshotReasonCodes": _build_integration_operator_snapshot_reason_codes(
                 integration_operator_snapshot_status,
+            ),
+            "integrationOperatorCardStatus": integration_operator_card_status,
+            "integrationOperatorCardLabel": _build_integration_operator_card_label(
+                integration_operator_card_status,
+            ),
+            "integrationOperatorCardSeverity": _build_integration_operator_card_severity(
+                integration_operator_card_status,
+            ),
+            "integrationOperatorCardOrder": _build_integration_operator_card_order(
+                integration_operator_card_status,
+            ),
+            "integrationOperatorCardReasonCodes": _build_integration_operator_card_reason_codes(
+                integration_operator_card_status,
             ),
             "exportReadiness": export_readiness,
             "exportReadinessLabel": _build_export_readiness_label(export_readiness),
@@ -1535,5 +1560,102 @@ def _build_integration_operator_snapshot_reason_codes(
         ("snapshot_review_required", integration_operator_snapshot_status == "review"),
         ("snapshot_monitor_only", integration_operator_snapshot_status == "monitor"),
         ("snapshot_ready", integration_operator_snapshot_status == "ready"),
+    ]
+    return [code for code, include in ordered_reasons if include]
+
+
+def _build_integration_operator_card_status(
+    *,
+    integration_mode: str,
+    integration_execution_state: Any,
+    integration_export_readiness: str | None,
+    integration_audit_completeness: str | None,
+    integration_operator_action: str | None,
+    integration_operator_action_blocking: bool | None,
+    integration_operator_snapshot_status: str | None,
+    integration_fee_reconciliation_status: str | None,
+) -> str | None:
+    if integration_execution_state is None:
+        return None
+    if integration_mode == "mock" and integration_execution_state != "mock_executed":
+        return None
+    if integration_mode not in {"mock", "live"}:
+        return None
+    if (
+        (
+            integration_operator_action_blocking is True
+            and integration_operator_action == "resolve_export_blockers"
+        )
+        or integration_export_readiness == "blocked"
+        or integration_operator_snapshot_status == "blocked"
+    ):
+        return "blocked"
+    if (
+        integration_export_readiness == "conditional"
+        or integration_operator_snapshot_status == "conditional"
+    ):
+        return "conditional"
+    if (
+        integration_operator_snapshot_status == "review"
+        or integration_fee_reconciliation_status == "mismatched"
+        or integration_audit_completeness in {"partial", "minimal"}
+    ):
+        return "review"
+    if integration_operator_snapshot_status == "monitor":
+        return "monitor"
+    if integration_operator_snapshot_status == "ready":
+        return "ready"
+    return None
+
+
+def _build_integration_operator_card_label(
+    integration_operator_card_status: str | None,
+) -> str | None:
+    mapping = {
+        "blocked": "Operator Card Blocked",
+        "conditional": "Operator Card Conditional",
+        "review": "Operator Card Review",
+        "monitor": "Operator Card Monitor",
+        "ready": "Operator Card Ready",
+    }
+    return mapping.get(integration_operator_card_status)
+
+
+def _build_integration_operator_card_severity(
+    integration_operator_card_status: str | None,
+) -> str | None:
+    if integration_operator_card_status == "blocked":
+        return "critical"
+    if integration_operator_card_status in {"conditional", "review"}:
+        return "warning"
+    if integration_operator_card_status in {"monitor", "ready"}:
+        return "info"
+    return None
+
+
+def _build_integration_operator_card_order(
+    integration_operator_card_status: str | None,
+) -> int | None:
+    mapping = {
+        "blocked": 1,
+        "conditional": 2,
+        "review": 3,
+        "monitor": 4,
+        "ready": 5,
+    }
+    return mapping.get(integration_operator_card_status)
+
+
+def _build_integration_operator_card_reason_codes(
+    integration_operator_card_status: str | None,
+) -> list[str] | None:
+    if integration_operator_card_status is None:
+        return None
+    ordered_reasons = [
+        ("card_export_blocked", integration_operator_card_status == "blocked"),
+        ("card_export_conditional", integration_operator_card_status == "conditional"),
+        ("card_review_required", integration_operator_card_status == "review"),
+        ("card_monitor_only", integration_operator_card_status == "monitor"),
+        ("card_ready", integration_operator_card_status == "ready"),
     ]
     return [code for code, include in ordered_reasons if include]
