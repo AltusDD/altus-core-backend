@@ -157,6 +157,11 @@
       "integrationSummaryPriority": null,
       "integrationSummaryPriorityLabel": null,
       "integrationSummaryReasonCodes": null,
+      "integrationDisplayBadge": null,
+      "integrationDisplayBadgeLabel": null,
+      "integrationDisplaySeverity": null,
+      "integrationDisplayOrder": null,
+      "integrationDisplayReason": null,
       "exportReadiness": "blocked",
       "exportReadinessLabel": "Export Blocked",
       "exportReadinessReasonCodes": [

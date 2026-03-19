@@ -250,6 +250,12 @@ def build_price_engine_provenance(
     integration_summary_reason_codes = _build_integration_summary_reason_codes(
         integration_summary_priority=integration_summary_priority,
     )
+    integration_display_badge = _build_integration_display_badge(
+        integration_mode=corelogic_integration.mode,
+        integration_execution_state=integration_execution_state,
+        integration_summary_priority=integration_summary_priority,
+        integration_fee_reconciliation_status=integration_fee_reconciliation_status,
+    )
 
     return {
         "titleQuote": {
@@ -352,6 +358,19 @@ def build_price_engine_provenance(
                 integration_summary_priority,
             ),
             "integrationSummaryReasonCodes": integration_summary_reason_codes,
+            "integrationDisplayBadge": integration_display_badge,
+            "integrationDisplayBadgeLabel": _build_integration_display_badge_label(
+                integration_display_badge,
+            ),
+            "integrationDisplaySeverity": _build_integration_display_severity(
+                integration_display_badge,
+            ),
+            "integrationDisplayOrder": _build_integration_display_order(
+                integration_display_badge,
+            ),
+            "integrationDisplayReason": _build_integration_display_reason(
+                integration_display_badge,
+            ),
             "exportReadiness": export_readiness,
             "exportReadinessLabel": _build_export_readiness_label(export_readiness),
             "exportReadinessReasonCodes": export_readiness_reason_codes,
@@ -1197,3 +1216,88 @@ def _build_integration_summary_reason_codes(
         ("summary_ready", integration_summary_priority == "ready"),
     ]
     return [code for code, include in ordered_reasons if include]
+
+
+def _build_integration_display_badge(
+    *,
+    integration_mode: str,
+    integration_execution_state: Any,
+    integration_summary_priority: str | None,
+    integration_fee_reconciliation_status: str | None,
+) -> str | None:
+    if integration_mode != "mock" or integration_execution_state != "mock_executed":
+        return None
+    if integration_summary_priority == "export_blocked":
+        return "blocked"
+    if (
+        integration_summary_priority == "export_conditional"
+        or integration_fee_reconciliation_status == "mismatched"
+    ):
+        return "conditional"
+    if integration_summary_priority == "audit_partial":
+        return "audit_partial"
+    if integration_summary_priority == "audit_minimal":
+        return "audit_minimal"
+    if integration_summary_priority == "mock_ready":
+        return "mock_ready"
+    if integration_summary_priority == "ready":
+        return "ready"
+    return None
+
+
+def _build_integration_display_badge_label(
+    integration_display_badge: str | None,
+) -> str | None:
+    if integration_display_badge == "blocked":
+        return "Integration Blocked"
+    if integration_display_badge == "conditional":
+        return "Integration Conditional"
+    if integration_display_badge == "audit_partial":
+        return "Integration Audit Partial"
+    if integration_display_badge == "audit_minimal":
+        return "Integration Audit Minimal"
+    if integration_display_badge == "mock_ready":
+        return "Integration Mock Ready"
+    if integration_display_badge == "ready":
+        return "Integration Ready"
+    return None
+
+
+def _build_integration_display_severity(
+    integration_display_badge: str | None,
+) -> str | None:
+    if integration_display_badge == "blocked":
+        return "critical"
+    if integration_display_badge in {"conditional", "audit_partial", "audit_minimal"}:
+        return "warning"
+    if integration_display_badge in {"mock_ready", "ready"}:
+        return "info"
+    return None
+
+
+def _build_integration_display_order(
+    integration_display_badge: str | None,
+) -> int | None:
+    mapping = {
+        "blocked": 1,
+        "conditional": 2,
+        "audit_partial": 3,
+        "audit_minimal": 4,
+        "mock_ready": 5,
+        "ready": 6,
+    }
+    return mapping.get(integration_display_badge)
+
+
+def _build_integration_display_reason(
+    integration_display_badge: str | None,
+) -> str | None:
+    mapping = {
+        "blocked": "export_blocked",
+        "conditional": "export_conditional",
+        "audit_partial": "audit_partial",
+        "audit_minimal": "audit_minimal",
+        "mock_ready": "mock_ready",
+        "ready": "live_ready",
+    }
+    return mapping.get(integration_display_badge)
