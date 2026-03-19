@@ -141,6 +141,12 @@
       "integrationFeeReconciliationStatus": null,
       "integrationFeeReconciliationLabel": null,
       "integrationFeeReconciliationMatch": null,
+      "integrationBundleStatus": null,
+      "integrationBundleStatusLabel": null,
+      "integrationHasArtifact": null,
+      "integrationHasTrace": null,
+      "integrationHasEvent": null,
+      "integrationIsExportReady": null,
       "exportReadiness": "blocked",
       "exportReadinessLabel": "Export Blocked",
       "exportReadinessReasonCodes": [

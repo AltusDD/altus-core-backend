@@ -172,6 +172,26 @@ def build_price_engine_provenance(
         integration_fee_line_sum=integration_fee_line_sum,
         integration_fee_delta=integration_fee_delta,
     )
+    integration_has_artifact = _build_integration_presence_flag(
+        integration_execution_state=integration_execution_state,
+        values=[corelogic_integration.artifact_type, corelogic_integration.artifact_id],
+    )
+    integration_has_trace = _build_integration_presence_flag(
+        integration_execution_state=integration_execution_state,
+        values=[corelogic_integration.trace_key],
+    )
+    integration_has_event = _build_integration_presence_flag(
+        integration_execution_state=integration_execution_state,
+        values=[corelogic_integration.event_type, corelogic_integration.event_ref],
+    )
+    integration_bundle_status = _build_integration_bundle_status(
+        integration_mode=corelogic_integration.mode,
+        integration_result_type=integration_result_type,
+        integration_execution_state=integration_execution_state,
+        integration_has_artifact=integration_has_artifact,
+        integration_has_trace=integration_has_trace,
+        integration_has_event=integration_has_event,
+    )
 
     return {
         "titleQuote": {
@@ -243,6 +263,20 @@ def build_price_engine_provenance(
             ),
             "integrationFeeReconciliationMatch": _build_integration_fee_reconciliation_match(
                 integration_fee_reconciliation_status,
+            ),
+            "integrationBundleStatus": integration_bundle_status,
+            "integrationBundleStatusLabel": _build_integration_bundle_status_label(
+                integration_bundle_status,
+            ),
+            "integrationHasArtifact": integration_has_artifact,
+            "integrationHasTrace": integration_has_trace,
+            "integrationHasEvent": integration_has_event,
+            "integrationIsExportReady": _build_integration_is_export_ready(
+                integration_bundle_status=integration_bundle_status,
+                integration_quote_reference=integration_quote_reference,
+                integration_snapshot_version=integration_snapshot_version,
+                integration_currency=integration_currency,
+                integration_estimated_total_title_cost=integration_estimated_total_title_cost,
             ),
             "exportReadiness": export_readiness,
             "exportReadinessLabel": _build_export_readiness_label(export_readiness),
@@ -672,6 +706,10 @@ def _is_present(value: str | None) -> bool:
     return bool(value and value.strip())
 
 
+def _is_non_empty_string(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 def _integration_bridge_value(
     normalized_result: dict[str, Any],
     key: str,
@@ -772,3 +810,66 @@ def _build_integration_fee_reconciliation_match(
     if integration_fee_reconciliation_status == "mismatched":
         return False
     return None
+
+
+def _build_integration_presence_flag(
+    *,
+    integration_execution_state: Any,
+    values: list[Any],
+) -> bool | None:
+    if integration_execution_state != "mock_executed":
+        return None
+    return all(_is_non_empty_string(value) for value in values)
+
+
+def _build_integration_bundle_status(
+    *,
+    integration_mode: str,
+    integration_result_type: Any,
+    integration_execution_state: Any,
+    integration_has_artifact: bool | None,
+    integration_has_trace: bool | None,
+    integration_has_event: bool | None,
+) -> str | None:
+    if integration_mode != "mock":
+        return None
+    if integration_result_type != "mock_title_quote":
+        return None
+    if integration_execution_state != "mock_executed":
+        return None
+    if integration_has_artifact and integration_has_trace and integration_has_event:
+        return "complete"
+    if any(value is True for value in [integration_has_artifact, integration_has_trace, integration_has_event]):
+        return "partial"
+    return "missing"
+
+
+def _build_integration_bundle_status_label(
+    integration_bundle_status: str | None,
+) -> str | None:
+    if integration_bundle_status == "complete":
+        return "Integration Bundle Complete"
+    if integration_bundle_status == "partial":
+        return "Integration Bundle Partial"
+    if integration_bundle_status == "missing":
+        return "Integration Bundle Missing"
+    return None
+
+
+def _build_integration_is_export_ready(
+    *,
+    integration_bundle_status: str | None,
+    integration_quote_reference: Any,
+    integration_snapshot_version: Any,
+    integration_currency: Any,
+    integration_estimated_total_title_cost: Any,
+) -> bool | None:
+    if integration_bundle_status is None:
+        return None
+    return bool(
+        integration_bundle_status == "complete"
+        and _is_non_empty_string(integration_quote_reference)
+        and _is_non_empty_string(integration_snapshot_version)
+        and _is_non_empty_string(integration_currency)
+        and integration_estimated_total_title_cost is not None
+    )
