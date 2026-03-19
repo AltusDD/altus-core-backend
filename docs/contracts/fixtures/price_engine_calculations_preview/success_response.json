@@ -177,6 +177,11 @@
       "integrationOperatorCardSeverity": null,
       "integrationOperatorCardOrder": null,
       "integrationOperatorCardReasonCodes": null,
+      "integrationExportPacketStatus": null,
+      "integrationExportPacketLabel": null,
+      "integrationExportPacketCompleteness": null,
+      "integrationExportPacketMissing": null,
+      "integrationExportPacketReady": null,
       "exportReadiness": "blocked",
       "exportReadinessLabel": "Export Blocked",
       "exportReadinessReasonCodes": [

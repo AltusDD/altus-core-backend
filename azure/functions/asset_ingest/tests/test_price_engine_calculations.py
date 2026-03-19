@@ -29,6 +29,10 @@ from price_engine_provenance import (  # noqa: E402
     _build_integration_display_order,
     _build_integration_display_reason,
     _build_integration_display_severity,
+    _build_integration_export_packet_completeness,
+    _build_integration_export_packet_missing,
+    _build_integration_export_packet_ready,
+    _build_integration_export_packet_status,
     _build_integration_operator_action,
     _build_integration_operator_action_blocking,
     _build_integration_operator_action_priority,
@@ -371,6 +375,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                     "integrationOperatorCardSeverity": None,
                     "integrationOperatorCardOrder": None,
                     "integrationOperatorCardReasonCodes": None,
+                    "integrationExportPacketStatus": None,
+                    "integrationExportPacketLabel": None,
+                    "integrationExportPacketCompleteness": None,
+                    "integrationExportPacketMissing": None,
+                    "integrationExportPacketReady": None,
                     "exportReadiness": "blocked",
                     "exportReadinessLabel": "Export Blocked",
                     "exportReadinessReasonCodes": [
@@ -654,6 +663,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "integrationOperatorCardSeverity": None,
                 "integrationOperatorCardOrder": None,
                 "integrationOperatorCardReasonCodes": None,
+                "integrationExportPacketStatus": None,
+                "integrationExportPacketLabel": None,
+                "integrationExportPacketCompleteness": None,
+                "integrationExportPacketMissing": None,
+                "integrationExportPacketReady": None,
                 "exportReadiness": "conditional",
                 "exportReadinessLabel": "Conditionally Export Ready",
                 "exportReadinessReasonCodes": [
@@ -862,6 +876,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "integrationOperatorCardSeverity": None,
                 "integrationOperatorCardOrder": None,
                 "integrationOperatorCardReasonCodes": None,
+                "integrationExportPacketStatus": None,
+                "integrationExportPacketLabel": None,
+                "integrationExportPacketCompleteness": None,
+                "integrationExportPacketMissing": None,
+                "integrationExportPacketReady": None,
                 "exportReadiness": "blocked",
                 "exportReadinessLabel": "Export Blocked",
                 "exportReadinessReasonCodes": [
@@ -980,6 +999,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardSeverity"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardOrder"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardReasonCodes"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketStatus"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketLabel"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketCompleteness"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketMissing"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketReady"])
 
     def test_source_event_bundle_status_is_missing_when_no_events_exist(self) -> None:
         provenance = build_price_engine_provenance(
@@ -1083,6 +1107,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardSeverity"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardOrder"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardReasonCodes"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketStatus"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketLabel"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketCompleteness"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketMissing"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketReady"])
 
     def test_warning_family_display_priority_honors_exact_priority_order(self) -> None:
         provenance = build_price_engine_provenance(
@@ -1665,6 +1694,14 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             provenance["titleQuote"]["integrationOperatorCardReasonCodes"],
             ["card_monitor_only"],
         )
+        self.assertEqual(provenance["titleQuote"]["integrationExportPacketStatus"], "ready")
+        self.assertEqual(
+            provenance["titleQuote"]["integrationExportPacketLabel"],
+            "Integration Export Packet Ready",
+        )
+        self.assertEqual(provenance["titleQuote"]["integrationExportPacketCompleteness"], "complete")
+        self.assertEqual(provenance["titleQuote"]["integrationExportPacketMissing"], [])
+        self.assertTrue(provenance["titleQuote"]["integrationExportPacketReady"])
 
     def test_corelogic_scaffold_live_mode_with_partial_credentials_reports_partial_state(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -1751,6 +1788,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardSeverity"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardOrder"])
         self.assertIsNone(provenance["titleQuote"]["integrationOperatorCardReasonCodes"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketStatus"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketLabel"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketCompleteness"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketMissing"])
+        self.assertIsNone(provenance["titleQuote"]["integrationExportPacketReady"])
 
     def test_corelogic_scaffold_live_mode_with_all_credentials_present_reports_ready_state(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -2175,6 +2217,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             provenance["titleQuote"]["integrationOperatorCardReasonCodes"],
             ["card_export_blocked"],
         )
+        self.assertEqual(provenance["titleQuote"]["integrationExportPacketStatus"], "blocked")
+        self.assertEqual(
+            provenance["titleQuote"]["integrationExportPacketLabel"],
+            "Integration Export Packet Blocked",
+        )
 
     def test_integration_summary_degrades_to_conditional_when_export_is_conditional(self) -> None:
         os.environ["PRICE_ENGINE_CORELOGIC_ENABLED"] = "true"
@@ -2245,6 +2292,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(
             provenance["titleQuote"]["integrationOperatorCardReasonCodes"],
             ["card_export_conditional"],
+        )
+        self.assertEqual(provenance["titleQuote"]["integrationExportPacketStatus"], "conditional")
+        self.assertEqual(
+            provenance["titleQuote"]["integrationExportPacketLabel"],
+            "Integration Export Packet Conditional",
         )
 
     def test_integration_summary_priority_can_classify_audit_partial(self) -> None:
@@ -2341,6 +2393,29 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(
             _build_integration_operator_card_reason_codes("review"),
             ["card_review_required"],
+        )
+        self.assertEqual(
+            _build_integration_export_packet_status(
+                integration_mode="mock",
+                integration_execution_state="mock_executed",
+                integration_export_readiness="ready",
+                integration_operator_card_status="review",
+                integration_export_packet_missing=["fee_reconciliation"],
+            ),
+            "conditional",
+        )
+        self.assertEqual(
+            _build_integration_export_packet_missing(
+                integration_mode="mock",
+                integration_execution_state="mock_executed",
+                integration_quote_reference="CORELOGIC-MOCK-QUOTE-001",
+                integration_snapshot_version="mock-v1",
+                integration_currency="USD",
+                integration_estimated_total_title_cost=3700.0,
+                integration_fee_reconciliation_status="mismatched",
+                integration_fee_reconciliation_match=False,
+            ),
+            ["fee_reconciliation"],
         )
 
     def test_integration_summary_priority_can_classify_audit_minimal(self) -> None:
@@ -2452,6 +2527,37 @@ class PriceEngineCalculationsTests(unittest.TestCase):
             _build_integration_operator_card_reason_codes("ready"),
             ["card_ready"],
         )
+        self.assertEqual(
+            _build_integration_export_packet_status(
+                integration_mode="live",
+                integration_execution_state="mock_executed",
+                integration_export_readiness="ready",
+                integration_operator_card_status="ready",
+                integration_export_packet_missing=[],
+            ),
+            "ready",
+        )
+        self.assertEqual(
+            _build_integration_export_packet_completeness(
+                integration_mode="live",
+                integration_execution_state="mock_executed",
+                integration_bundle_status="complete",
+                integration_quote_reference="CORELOGIC-MOCK-QUOTE-001",
+                integration_snapshot_version="mock-v1",
+                integration_currency="USD",
+                integration_estimated_total_title_cost=3700.0,
+                integration_fee_reconciliation_status="matched",
+                integration_fee_reconciliation_match=True,
+            ),
+            "complete",
+        )
+        self.assertTrue(
+            _build_integration_export_packet_ready(
+                integration_export_packet_status="ready",
+                integration_export_packet_completeness="complete",
+                integration_export_packet_missing=[],
+            )
+        )
 
     def test_integration_operator_action_prioritizes_fee_mismatch(self) -> None:
         self.assertEqual(
@@ -2496,6 +2602,27 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 integration_fee_reconciliation_status="mismatched",
             ),
             "review",
+        )
+        self.assertEqual(
+            _build_integration_export_packet_completeness(
+                integration_mode="mock",
+                integration_execution_state="mock_executed",
+                integration_bundle_status="complete",
+                integration_quote_reference="CORELOGIC-MOCK-QUOTE-001",
+                integration_snapshot_version="mock-v1",
+                integration_currency="USD",
+                integration_estimated_total_title_cost=3700.0,
+                integration_fee_reconciliation_status="mismatched",
+                integration_fee_reconciliation_match=False,
+            ),
+            "partial",
+        )
+        self.assertFalse(
+            _build_integration_export_packet_ready(
+                integration_export_packet_status="conditional",
+                integration_export_packet_completeness="partial",
+                integration_export_packet_missing=["fee_reconciliation"],
+            )
         )
 
     def test_integration_bundle_status_degrades_when_artifact_fields_are_missing(self) -> None:

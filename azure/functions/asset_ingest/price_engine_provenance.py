@@ -288,6 +288,34 @@ def build_price_engine_provenance(
         integration_operator_snapshot_status=integration_operator_snapshot_status,
         integration_fee_reconciliation_status=integration_fee_reconciliation_status,
     )
+    integration_export_packet_missing = _build_integration_export_packet_missing(
+        integration_mode=corelogic_integration.mode,
+        integration_execution_state=integration_execution_state,
+        integration_quote_reference=integration_quote_reference,
+        integration_snapshot_version=integration_snapshot_version,
+        integration_currency=integration_currency,
+        integration_estimated_total_title_cost=integration_estimated_total_title_cost,
+        integration_fee_reconciliation_status=integration_fee_reconciliation_status,
+        integration_fee_reconciliation_match=integration_fee_reconciliation_match,
+    )
+    integration_export_packet_status = _build_integration_export_packet_status(
+        integration_mode=corelogic_integration.mode,
+        integration_execution_state=integration_execution_state,
+        integration_export_readiness=integration_export_readiness,
+        integration_operator_card_status=integration_operator_card_status,
+        integration_export_packet_missing=integration_export_packet_missing,
+    )
+    integration_export_packet_completeness = _build_integration_export_packet_completeness(
+        integration_mode=corelogic_integration.mode,
+        integration_execution_state=integration_execution_state,
+        integration_bundle_status=integration_bundle_status,
+        integration_quote_reference=integration_quote_reference,
+        integration_snapshot_version=integration_snapshot_version,
+        integration_currency=integration_currency,
+        integration_estimated_total_title_cost=integration_estimated_total_title_cost,
+        integration_fee_reconciliation_status=integration_fee_reconciliation_status,
+        integration_fee_reconciliation_match=integration_fee_reconciliation_match,
+    )
 
     return {
         "titleQuote": {
@@ -441,6 +469,17 @@ def build_price_engine_provenance(
             ),
             "integrationOperatorCardReasonCodes": _build_integration_operator_card_reason_codes(
                 integration_operator_card_status,
+            ),
+            "integrationExportPacketStatus": integration_export_packet_status,
+            "integrationExportPacketLabel": _build_integration_export_packet_label(
+                integration_export_packet_status,
+            ),
+            "integrationExportPacketCompleteness": integration_export_packet_completeness,
+            "integrationExportPacketMissing": integration_export_packet_missing,
+            "integrationExportPacketReady": _build_integration_export_packet_ready(
+                integration_export_packet_status=integration_export_packet_status,
+                integration_export_packet_completeness=integration_export_packet_completeness,
+                integration_export_packet_missing=integration_export_packet_missing,
             ),
             "exportReadiness": export_readiness,
             "exportReadinessLabel": _build_export_readiness_label(export_readiness),
@@ -1659,3 +1698,130 @@ def _build_integration_operator_card_reason_codes(
         ("card_ready", integration_operator_card_status == "ready"),
     ]
     return [code for code, include in ordered_reasons if include]
+
+
+def _build_integration_export_packet_missing(
+    *,
+    integration_mode: str,
+    integration_execution_state: Any,
+    integration_quote_reference: Any,
+    integration_snapshot_version: Any,
+    integration_currency: Any,
+    integration_estimated_total_title_cost: Any,
+    integration_fee_reconciliation_status: str | None,
+    integration_fee_reconciliation_match: bool | None,
+) -> list[str] | None:
+    if integration_execution_state is None:
+        return None
+    if integration_mode == "mock" and integration_execution_state != "mock_executed":
+        return None
+    if integration_mode not in {"mock", "live"}:
+        return None
+    ordered_missing = [
+        ("quote_reference", not _is_non_empty_string(integration_quote_reference)),
+        ("snapshot_version", not _is_non_empty_string(integration_snapshot_version)),
+        ("currency", not _is_non_empty_string(integration_currency)),
+        ("estimated_total_title_cost", integration_estimated_total_title_cost is None),
+        (
+            "fee_reconciliation",
+            (
+                integration_fee_reconciliation_status is None
+                or integration_fee_reconciliation_match is None
+                or integration_fee_reconciliation_status == "mismatched"
+                or integration_fee_reconciliation_match is False
+            ),
+        ),
+    ]
+    return [token for token, include in ordered_missing if include]
+
+
+def _build_integration_export_packet_status(
+    *,
+    integration_mode: str,
+    integration_execution_state: Any,
+    integration_export_readiness: str | None,
+    integration_operator_card_status: str | None,
+    integration_export_packet_missing: list[str] | None,
+) -> str | None:
+    if integration_execution_state is None:
+        return None
+    if integration_mode == "mock" and integration_execution_state != "mock_executed":
+        return None
+    if integration_mode not in {"mock", "live"}:
+        return None
+    if (
+        integration_export_readiness == "blocked"
+        or integration_operator_card_status == "blocked"
+    ):
+        return "blocked"
+    if (
+        integration_export_readiness == "conditional"
+        or integration_operator_card_status == "conditional"
+        or bool(integration_export_packet_missing)
+    ):
+        return "conditional"
+    return "ready"
+
+
+def _build_integration_export_packet_label(
+    integration_export_packet_status: str | None,
+) -> str | None:
+    mapping = {
+        "ready": "Integration Export Packet Ready",
+        "conditional": "Integration Export Packet Conditional",
+        "blocked": "Integration Export Packet Blocked",
+    }
+    return mapping.get(integration_export_packet_status)
+
+
+def _build_integration_export_packet_completeness(
+    *,
+    integration_mode: str,
+    integration_execution_state: Any,
+    integration_bundle_status: str | None,
+    integration_quote_reference: Any,
+    integration_snapshot_version: Any,
+    integration_currency: Any,
+    integration_estimated_total_title_cost: Any,
+    integration_fee_reconciliation_status: str | None,
+    integration_fee_reconciliation_match: bool | None,
+) -> str | None:
+    if integration_execution_state is None:
+        return None
+    if integration_mode == "mock" and integration_execution_state != "mock_executed":
+        return None
+    if integration_mode not in {"mock", "live"}:
+        return None
+    signals = [
+        integration_bundle_status == "complete",
+        _is_non_empty_string(integration_quote_reference),
+        _is_non_empty_string(integration_snapshot_version),
+        _is_non_empty_string(integration_currency),
+        integration_estimated_total_title_cost is not None,
+        integration_fee_reconciliation_status == "matched",
+        integration_fee_reconciliation_match is True,
+    ]
+    if all(signals):
+        return "complete"
+    if any(signals):
+        return "partial"
+    return "minimal"
+
+
+def _build_integration_export_packet_ready(
+    *,
+    integration_export_packet_status: str | None,
+    integration_export_packet_completeness: str | None,
+    integration_export_packet_missing: list[str] | None,
+) -> bool | None:
+    if (
+        integration_export_packet_status is None
+        or integration_export_packet_completeness is None
+        or integration_export_packet_missing is None
+    ):
+        return None
+    return (
+        integration_export_packet_status == "ready"
+        and integration_export_packet_completeness == "complete"
+        and integration_export_packet_missing == []
+    )
