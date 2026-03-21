@@ -340,6 +340,7 @@ Repo-proven authoritative DB objects:
 Grounding notes:
 - `price_engine_service.py` is a pure calculation module.
 - No repo-proven Supabase table, view, function, or policy currently serves as price-engine persistence.
+- `docs/database/PRICE_ENGINE_RECONCILIATION_SCHEMA_PLAN_V1.md` is the current implementation-ready proposal for future property import and reconciliation persistence, but it is not live schema authority.
 
 ## Unknowns / Gaps
 
