@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define a PostgreSQL / Supabase-ready storage plan for property-source imports, canonical property records, field-level reconciliation, manual overrides, repeatable MLS child records, and import freshness before additional Price Engine UI work continues.
+Define a PostgreSQL / Supabase-ready storage plan for property-source imports, canonical property records, field-level reconciliation, manual overrides, repeatable MLS child records, evidence and document workflows, and import freshness before additional Price Engine UI work continues.
 
 This document is a schema plan only. It does not claim live database implementation on `main`, does not activate any runtime behavior, and does not replace the current staging-proven schema inventory.
 
@@ -11,9 +11,10 @@ This document is a schema plan only. It does not claim live database implementat
 - Database first for durable import storage and reconciliation state
 - API fallback only when canonical DB-backed values are absent or stale
 - Calculation last after canonical property state is resolved
-- Support `corelogic`, `mls`, and `manual` source types
+- Support `corelogic`, `mls`, `field`, `dropbox`, `zipforms`, and `manual` source types
 - Preserve raw source provenance, field-level comparison, and operator override history
 - Preserve full MLS payload snapshots plus normalized repeatable child records such as rooms and media
+- Preserve evidence, storage references, explicit version supersession, and checklist completeness state as first-class database records
 - Stay additive to the current Supabase / PostgreSQL model
 
 ## Proposed Tables
@@ -46,6 +47,7 @@ Key columns:
 - `canonical_systems_features jsonb not null default '{}'::jsonb`
 - `canonical_association_terms jsonb not null default '{}'::jsonb`
 - `canonical_remarks jsonb not null default '{}'::jsonb`
+- `canonical_document_state jsonb not null default '{}'::jsonb`
 - `last_reconciled_at timestamptz null`
 - `last_imported_at timestamptz null`
 - `created_at timestamptz not null default now()`
@@ -100,6 +102,8 @@ Key columns:
 - `listing_timestamp timestamptz null`
 - `listing_status text null`
 - `listing_event jsonb not null default '{}'::jsonb`
+- `source_path text null`
+- `source_locator jsonb not null default '{}'::jsonb`
 - `is_latest boolean not null default true`
 - `raw_payload jsonb not null default '{}'::jsonb`
 - `raw_payload_hash text null`
@@ -244,6 +248,222 @@ Recommended constraints:
 - index `(property_id, field_name, is_active)`
 - optional unique partial index on `(property_id, field_name)` where `is_active = true`
 
+### `public.property_file_storage_refs`
+
+Canonical storage reference table for Dropbox paths, Supabase storage objects, direct provider file URLs, or other external file pointers.
+
+Key columns:
+- `id uuid primary key default gen_random_uuid()`
+- `organization_id uuid null references public.organizations(id)`
+- `property_id uuid null references public.properties(id) on delete cascade`
+- `asset_id uuid null references public.assets(id)`
+- `transaction_id uuid null`
+- `storage_provider text not null`
+- `storage_bucket text null`
+- `storage_path text null`
+- `provider_file_key text null`
+- `external_url text null`
+- `canonical_pointer jsonb not null default '{}'::jsonb`
+- `file_name text null`
+- `mime_type text null`
+- `byte_size bigint null`
+- `checksum_sha256 text null`
+- `checksum_md5 text null`
+- `captured_from_source_type text not null`
+- `source_import_id uuid null references public.property_source_imports(id)`
+- `import_run_id uuid null references public.property_import_runs(id)`
+- `fetched_at timestamptz null`
+- `last_verified_at timestamptz null`
+- `created_by_user_id uuid null`
+- `created_at timestamptz not null default now()`
+
+Recommended constraints:
+- check `storage_provider in ('dropbox', 'supabase_storage', 'external_url', 'zipforms', 'manual')`
+- check `captured_from_source_type in ('corelogic', 'mls', 'field', 'dropbox', 'zipforms', 'manual')`
+- index `(property_id, storage_provider)`
+- index `(provider_file_key)`
+
+### `public.property_file_versions`
+
+Version ledger for any stored or referenced file, with explicit supersession links and audit retention.
+
+Key columns:
+- `id uuid primary key default gen_random_uuid()`
+- `organization_id uuid null references public.organizations(id)`
+- `property_id uuid not null references public.properties(id) on delete cascade`
+- `asset_id uuid null references public.assets(id)`
+- `transaction_id uuid null`
+- `storage_ref_id uuid not null references public.property_file_storage_refs(id) on delete restrict`
+- `file_class text not null`
+- `version_number integer not null`
+- `version_label text null`
+- `review_state text not null default 'received'`
+- `verification_state text not null default 'unverified'`
+- `supersedes_file_version_id uuid null references public.property_file_versions(id)`
+- `superseded_by_file_version_id uuid null references public.property_file_versions(id)`
+- `is_latest boolean not null default true`
+- `is_approved boolean not null default false`
+- `client_visibility_state text not null default 'internal_only'`
+- `uploaded_by_user_id uuid null`
+- `captured_by_user_id uuid null`
+- `source_type text not null`
+- `source_import_id uuid null references public.property_source_imports(id)`
+- `import_run_id uuid null references public.property_import_runs(id)`
+- `version_metadata jsonb not null default '{}'::jsonb`
+- `created_at timestamptz not null default now()`
+
+Recommended constraints:
+- check `source_type in ('corelogic', 'mls', 'field', 'dropbox', 'zipforms', 'manual')`
+- check `file_class in ('listing_photo', 'field_photo', 'floor_plan', 'inspection_report', 'construction_proposal', 'appraisal', 'loi', 'contract_executed', 'contract_amendment', 'disclosure', 'due_diligence_doc', 'title_doc', 'closing_doc', 'correspondence', 'client_artifact')`
+- check `review_state in ('received', 'under_review', 'approved', 'rejected', 'archived')`
+- check `verification_state in ('unverified', 'verified', 'mismatch', 'expired')`
+- check `client_visibility_state in ('internal_only', 'client_visible', 'client_hidden', 'client_expired')`
+- unique `(property_id, file_class, version_number)`
+- unique partial index on `(property_id, file_class)` where `is_latest = true`
+
+### `public.property_evidence_assets`
+
+Canonical evidence registry that links property-level media, reports, field captures, and imported file versions to property workflows.
+
+Key columns:
+- `id uuid primary key default gen_random_uuid()`
+- `organization_id uuid null references public.organizations(id)`
+- `property_id uuid not null references public.properties(id) on delete cascade`
+- `asset_id uuid null references public.assets(id)`
+- `transaction_id uuid null`
+- `source_type text not null`
+- `evidence_class text not null`
+- `source_import_id uuid null references public.property_source_imports(id)`
+- `import_run_id uuid null references public.property_import_runs(id)`
+- `source_media_id uuid null references public.property_source_media(id)`
+- `file_version_id uuid null references public.property_file_versions(id)`
+- `storage_ref_id uuid null references public.property_file_storage_refs(id)`
+- `caption text null`
+- `description text null`
+- `captured_at timestamptz null`
+- `captured_by_user_id uuid null`
+- `review_state text not null default 'received'`
+- `client_visibility_state text not null default 'internal_only'`
+- `is_primary boolean not null default false`
+- `sort_order integer null`
+- `metadata jsonb not null default '{}'::jsonb`
+- `created_at timestamptz not null default now()`
+
+Recommended constraints:
+- check `source_type in ('corelogic', 'mls', 'field', 'dropbox', 'zipforms', 'manual')`
+- check `evidence_class in ('listing_photo', 'field_photo', 'floor_plan', 'inspection_report', 'construction_proposal', 'appraisal', 'loi', 'contract_executed', 'contract_amendment', 'disclosure', 'due_diligence_doc', 'title_doc', 'closing_doc', 'correspondence', 'client_artifact')`
+- index `(property_id, evidence_class)`
+- index `(transaction_id, evidence_class)`
+
+### `public.property_document_packets`
+
+Logical document bundles for a property or transaction, such as acquisition packet, diligence packet, title packet, or closing packet.
+
+Key columns:
+- `id uuid primary key default gen_random_uuid()`
+- `organization_id uuid null references public.organizations(id)`
+- `property_id uuid not null references public.properties(id) on delete cascade`
+- `asset_id uuid null references public.assets(id)`
+- `transaction_id uuid null`
+- `packet_type text not null`
+- `packet_status text not null default 'open'`
+- `deal_stage text null`
+- `packet_label text null`
+- `metadata jsonb not null default '{}'::jsonb`
+- `created_by_user_id uuid null`
+- `created_at timestamptz not null default now()`
+- `updated_at timestamptz not null default now()`
+
+Recommended constraints:
+- check `packet_status in ('open', 'in_review', 'complete', 'archived')`
+- index `(property_id, packet_type, deal_stage)`
+
+### `public.property_document_requirements`
+
+Checklist definition and current requirement state for documents expected at a property or transaction stage.
+
+Key columns:
+- `id uuid primary key default gen_random_uuid()`
+- `organization_id uuid null references public.organizations(id)`
+- `property_id uuid not null references public.properties(id) on delete cascade`
+- `asset_id uuid null references public.assets(id)`
+- `transaction_id uuid null`
+- `document_packet_id uuid null references public.property_document_packets(id) on delete set null`
+- `requirement_key text not null`
+- `file_class text not null`
+- `checklist_group text not null`
+- `deal_stage text null`
+- `required_flag boolean not null default true`
+- `requirement_status text not null default 'missing'`
+- `review_state text not null default 'pending'`
+- `latest_approved_file_version_id uuid null references public.property_file_versions(id)`
+- `current_submission_id uuid null`
+- `latest_received_at timestamptz null`
+- `notes text null`
+- `created_at timestamptz not null default now()`
+- `updated_at timestamptz not null default now()`
+
+Recommended constraints:
+- check `file_class in ('listing_photo', 'field_photo', 'floor_plan', 'inspection_report', 'construction_proposal', 'appraisal', 'loi', 'contract_executed', 'contract_amendment', 'disclosure', 'due_diligence_doc', 'title_doc', 'closing_doc', 'correspondence', 'client_artifact')`
+- check `requirement_status in ('missing', 'received', 'under_review', 'approved', 'rejected', 'waived', 'superseded')`
+- check `review_state in ('pending', 'under_review', 'approved', 'rejected')`
+- unique `(property_id, transaction_id, requirement_key)`
+- index `(property_id, deal_stage, checklist_group)`
+
+### `public.property_document_submissions`
+
+Submission ledger connecting requirements to received file versions, including supersession and approval outcomes.
+
+Key columns:
+- `id uuid primary key default gen_random_uuid()`
+- `organization_id uuid null references public.organizations(id)`
+- `property_id uuid not null references public.properties(id) on delete cascade`
+- `asset_id uuid null references public.assets(id)`
+- `transaction_id uuid null`
+- `document_requirement_id uuid not null references public.property_document_requirements(id) on delete cascade`
+- `file_version_id uuid not null references public.property_file_versions(id) on delete restrict`
+- `submitted_by_user_id uuid null`
+- `submitted_at timestamptz not null default now()`
+- `submission_source_type text not null`
+- `review_state text not null default 'pending'`
+- `reviewed_by_user_id uuid null`
+- `reviewed_at timestamptz null`
+- `approval_notes text null`
+- `supersedes_submission_id uuid null references public.property_document_submissions(id)`
+- `superseded_by_submission_id uuid null references public.property_document_submissions(id)`
+- `is_latest boolean not null default true`
+- `created_at timestamptz not null default now()`
+
+Recommended constraints:
+- check `submission_source_type in ('corelogic', 'mls', 'field', 'dropbox', 'zipforms', 'manual')`
+- check `review_state in ('pending', 'under_review', 'approved', 'rejected', 'superseded')`
+- index `(document_requirement_id, is_latest)`
+
+### `public.property_client_access_links`
+
+Visibility and share-control table for client-facing file access without treating Dropbox or any storage provider as the database of record.
+
+Key columns:
+- `id uuid primary key default gen_random_uuid()`
+- `organization_id uuid null references public.organizations(id)`
+- `property_id uuid not null references public.properties(id) on delete cascade`
+- `asset_id uuid null references public.assets(id)`
+- `transaction_id uuid null`
+- `file_version_id uuid not null references public.property_file_versions(id) on delete cascade`
+- `storage_ref_id uuid not null references public.property_file_storage_refs(id) on delete restrict`
+- `visibility_state text not null default 'client_hidden'`
+- `share_token text null`
+- `share_url text null`
+- `expires_at timestamptz null`
+- `last_accessed_at timestamptz null`
+- `access_metadata jsonb not null default '{}'::jsonb`
+- `created_by_user_id uuid null`
+- `created_at timestamptz not null default now()`
+
+Recommended constraints:
+- check `visibility_state in ('client_hidden', 'client_visible', 'client_revoked', 'client_expired')`
+- unique partial index on `(file_version_id)` where `visibility_state = 'client_visible'`
+
 ### `public.property_source_rooms`
 
 Repeatable normalized room records extracted from MLS or other source payloads.
@@ -302,6 +522,7 @@ Recommended constraints:
 - index `(property_id, source_import_id, sort_order nulls last)`
 - index `(provider_media_key)`
 - check `(media_url is not null) or (storage_pointer is not null)`
+- check `source_type in ('corelogic', 'mls', 'field', 'dropbox', 'zipforms', 'manual')`
 
 ### `public.property_source_association_facts`
 
@@ -337,6 +558,13 @@ Recommended constraints:
 - `public.property_source_rooms` stores repeatable room rows owned by one source import.
 - `public.property_source_media` stores repeatable media rows owned by one source import.
 - `public.property_source_association_facts` stores optional structured association and amenities detail owned by one source import.
+- `public.property_file_storage_refs` stores canonical storage-provider pointers for evidence and documents.
+- `public.property_file_versions` stores explicit version and supersession lineage for files.
+- `public.property_evidence_assets` registers evidence/media assets linked to property workflows.
+- `public.property_document_packets` groups property or transaction document workflows.
+- `public.property_document_requirements` stores checklist requirements by stage and file class.
+- `public.property_document_submissions` stores received versions against requirements.
+- `public.property_client_access_links` controls client-visible access without making the storage provider authoritative.
 - `public.properties.asset_id` provides optional linkage back to the existing `public.assets` surface when a property is tied to the current asset model.
 
 ## Conflict And Override Handling
@@ -365,6 +593,28 @@ Recommended constraints:
   - stamp `reviewed_by_user_id` and `reviewed_at`
 - Override provenance is preserved through `override_user_id`, `override_created_at`, and optional `source_context`.
 
+## File And Versioning Model
+
+### Storage references
+
+- `public.property_file_storage_refs` is the canonical database record for a file pointer.
+- Dropbox paths, ZipForms export links, Supabase storage object paths, and direct external URLs are stored here.
+- The storage provider is never the database of record; the durable Altus reference row is.
+
+### Versioning
+
+- `public.property_file_versions` is the immutable file-version ledger.
+- Every new upload, import, or returned ZipForms document creates a new file version row.
+- `version_number`, `supersedes_file_version_id`, and `superseded_by_file_version_id` make replacement explicit.
+- Superseded rows remain queryable for audit.
+- `is_latest` marks the newest version per property and file class, while `is_approved` identifies the currently approved version.
+
+### Evidence linkage
+
+- `public.property_evidence_assets` links media or document evidence to the property workflow.
+- Media imported from MLS may have both a `property_source_media` row and an evidence row when the asset becomes workflow-relevant.
+- Field captures, Dropbox-sourced reports, and ZipForms contract documents can all be represented through `property_evidence_assets` plus `property_file_versions`.
+
 ## Freshness And Import Tracking Model
 
 ### Run tracking
@@ -386,6 +636,38 @@ Recommended constraints:
 Recommended future read rule:
 - calculations should prefer canonical `properties.*` values only when the corresponding `property_reconciliation_status` row is not `unresolved` and the underlying selected source import is within the freshness window required by the consuming workflow
 - otherwise the caller may fall back to a direct API fetch or surface the field as stale / unresolved
+
+## Completeness And Checklist Model
+
+### Requirement matrix
+
+- `public.property_document_requirements` defines the required-document matrix by property, optional transaction, deal stage, checklist group, and file class.
+- `required_flag` allows optional versus mandatory artifacts to be modeled in the same table.
+
+### Current receipt state
+
+- `requirement_status` stores whether a required item is missing, received, under review, approved, rejected, waived, or superseded.
+- `latest_approved_file_version_id` points to the currently approved version when one exists.
+- `current_submission_id` tracks the most recent submission under review or recently received.
+
+### Submission flow
+
+- Each received artifact creates a `property_file_versions` row.
+- Each requirement-linked delivery creates a `property_document_submissions` row.
+- If a newer version replaces the prior one, submission supersession and file-version supersession are both recorded explicitly.
+- Missing items are queryable directly from requirements whose `required_flag = true` and `requirement_status in ('missing', 'rejected')`.
+
+### Property-level completeness summary
+
+- `properties.canonical_document_state` stores an optional denormalized summary for fast reads.
+- The authoritative source remains the requirements and submissions tables.
+
+## Client Visibility And Access Model
+
+- `public.property_file_versions.client_visibility_state` stores the version-level visibility intent.
+- `public.property_client_access_links` stores the actual share-control record, including tokenized URL, expiry, and last access timestamp.
+- Client-visible files should always reference a durable `property_file_versions` row and a durable `property_file_storage_refs` row.
+- Revoking client access should update the visibility row, not delete historical file or submission records.
 
 ## Field Coverage Mapping
 
@@ -451,6 +733,13 @@ Expanded canonical ownership buckets:
 - `public.property_source_rooms`
 - `public.property_source_media`
 - `public.property_source_association_facts`
+- `public.property_file_storage_refs`
+- `public.property_file_versions`
+- `public.property_evidence_assets`
+- `public.property_document_packets`
+- `public.property_document_requirements`
+- `public.property_document_submissions`
+- `public.property_client_access_links`
 
 These tables preserve full source lineage, raw payload snapshots, repeatable child records, and normalized field evidence without deciding final authority by themselves.
 
@@ -465,6 +754,7 @@ These tables represent the current chosen property truth, the decision state beh
 ## PostgreSQL / Supabase Readiness Notes
 
 - Prefer `jsonb` for flexible structured fields like address components, rent indicators, valuation metadata, tax metadata, and canonical source summaries.
+- Prefer `jsonb` for storage pointers, checklist metadata, access metadata, document state summaries, and evidence metadata where provider-specific structures vary.
 - Prefer `jsonb` for broad MLS surface buckets like listing lifecycle, geo bundles, systems/features, association terms, and remarks when the exact long-term column set is still evolving.
 - Use ordinary tables first; analytical or materialized views can be added later after authority and refresh behavior are proven.
 - Add RLS only after org-scoping and operator roles for manual overrides are explicitly defined.
@@ -479,10 +769,17 @@ These tables represent the current chosen property truth, the decision state beh
 5. Create `public.property_source_rooms`
 6. Create `public.property_source_media`
 7. Create `public.property_source_association_facts`
-8. Create `public.property_reconciliation_status`
-9. Create `public.property_manual_overrides`
-10. Add indexes and foreign keys
-11. Add non-destructive verification SQL for table existence, key constraints, source-type checks, and repeatable child-record relationships
+8. Create `public.property_file_storage_refs`
+9. Create `public.property_file_versions`
+10. Create `public.property_evidence_assets`
+11. Create `public.property_document_packets`
+12. Create `public.property_document_requirements`
+13. Create `public.property_document_submissions`
+14. Create `public.property_client_access_links`
+15. Create `public.property_reconciliation_status`
+16. Create `public.property_manual_overrides`
+17. Add indexes and foreign keys
+18. Add non-destructive verification SQL for table existence, key constraints, source-type checks, child-record relationships, and supersession links
 
 ## Out Of Scope For This Slice
 
