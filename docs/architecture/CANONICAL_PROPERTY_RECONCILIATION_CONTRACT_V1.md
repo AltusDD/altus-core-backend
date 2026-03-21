@@ -13,6 +13,7 @@ Define the backend-side canonical property model for underwriting and cockpit wo
 - manual analyst override
 
 This contract is implementation-ready and intentionally backend-first.
+It must support full-ingestion durability for MLS records while allowing selective cockpit exposure.
 
 ## Authority Rule
 
@@ -35,15 +36,41 @@ Required fields:
 - `property_id`
 - `org_id`
 - `canonical_address`
+- `canonical_geo_json`
 - `canonical_apn`
+- `canonical_listing_identity_json`
+- `canonical_listing_lifecycle_json`
 - `canonical_beds`
 - `canonical_baths`
+- `canonical_bath_breakdown_json`
+- `canonical_rooms_total`
 - `canonical_sqft`
+- `canonical_above_grade_finished_sqft`
+- `canonical_below_grade_finished_sqft`
+- `canonical_main_level_finished_sqft`
+- `canonical_upper_level_finished_sqft`
+- `canonical_lower_level_finished_sqft`
 - `canonical_lot_size_sqft`
+- `canonical_lot_size_acres`
 - `canonical_year_built`
+- `canonical_levels`
+- `canonical_architectural_style`
 - `canonical_property_type`
+- `canonical_property_subtype`
+- `canonical_property_attached`
+- `canonical_new_construction`
+- `canonical_basement_json`
+- `canonical_garage_json`
+- `canonical_fireplace`
+- `canonical_waterfront`
+- `canonical_water_body_name`
 - `canonical_unit_count`
+- `canonical_interior_systems_json`
+- `canonical_exterior_systems_json`
+- `canonical_association_json`
 - `canonical_rent_indicators_json`
+- `canonical_listing_terms_json`
+- `canonical_remarks_json`
 - `canonical_valuation_json`
 - `canonical_tax_metadata_json`
 - `canonical_source_summary_json`
@@ -76,6 +103,7 @@ Required fields:
 - `payload_json`
 - `payload_hash`
 - `import_status`
+- `import_family`
 - `fetched_at`
 - `source_observed_at`
 - `ingested_at`
@@ -91,6 +119,7 @@ Notes:
 - `payload_json` remains immutable.
 - `source_observed_at` captures provider-side record freshness when available.
 - `fetched_at` captures Altus retrieval time.
+- MLS listing snapshots stay durable even when many fields are not promoted to canonical property truth.
 
 ### 3. `property_field_observations`
 
@@ -114,14 +143,90 @@ Required fields:
 Exact `field_key` values in V1:
 
 - `address`
+- `city`
+- `state`
+- `postal_code`
+- `county`
+- `township`
+- `subdivision_name`
+- `mls_number`
+- `historical_mls_number`
+- `listing_status`
+- `listing_date`
+- `status_change_timestamp`
+- `dom`
+- `original_list_price`
+- `list_price`
+- `close_price`
+- `contingent`
+- `back_on_market_date`
+- `close_date`
 - `apn`
+- `tax_legal_description`
+- `zoning_description`
+- `latitude`
+- `longitude`
+- `directions`
+- `cross_street`
 - `beds`
 - `baths`
+- `bath_breakdown`
+- `rooms_total`
 - `sqft`
+- `above_grade_finished_area`
+- `below_grade_finished_area`
+- `main_level_finished_sqft`
+- `upper_level_finished_sqft`
+- `lower_level_finished_sqft`
 - `lot_size`
+- `lot_size_acres`
 - `year_built`
+- `levels`
+- `architectural_style`
 - `property_type`
+- `property_subtype`
+- `property_attached`
+- `new_construction`
+- `basement`
+- `garage`
+- `garage_spaces`
+- `fireplace`
+- `waterfront`
+- `water_body_name`
 - `unit_count`
+- `appliances`
+- `interior_features`
+- `exterior_features`
+- `flooring`
+- `parking_features`
+- `patio_and_porch_features`
+- `cooling`
+- `heating`
+- `utilities`
+- `water_source`
+- `sewer`
+- `roof`
+- `security_features`
+- `construction_materials`
+- `electric`
+- `laundry_features`
+- `lot_features`
+- `other_structures`
+- `association_name`
+- `association_phone`
+- `association_fee`
+- `association_fee_frequency`
+- `association_amenities`
+- `earnest_money_deposit`
+- `listing_terms`
+- `seller_concessions`
+- `buyer_financing`
+- `concessions`
+- `possession`
+- `public_remarks`
+- `public_historical_remarks`
+- `documents_available`
+- `special_listing_conditions`
 - `rent_indicators`
 - `valuation_avm`
 - `tax_metadata`
@@ -217,25 +322,184 @@ Exact `conflict_status` enum:
 - `resolved`
 - `suppressed`
 
-## Exact Field Groups Proposed
+### 7. `property_source_rooms`
 
-### Identity Group
+Repeatable room-level child records per source snapshot.
+
+Required fields:
+
+- `source_room_id`
+- `property_id`
+- `source_import_id`
+- `source_type`
+- `ordinal`
+- `room_name`
+- `level`
+- `length`
+- `width`
+- `dimensions_display`
+- `room_remarks`
+- `normalized_room_type`
+- `created_at`
+
+Notes:
+
+- one-to-many room records are source-snapshot scoped
+- room rows are durable ingest evidence, not flattened into one JSON string
+- cockpit detail views can render these without mutating canonical field tables
+
+### 8. `property_source_media`
+
+Ordered media references per source snapshot.
+
+Required fields:
+
+- `source_media_id`
+- `property_id`
+- `source_import_id`
+- `source_type`
+- `ordinal`
+- `media_type`
+- `media_url`
+- `thumbnail_url`
+- `caption`
+- `mime_type`
+- `width_px`
+- `height_px`
+- `source_media_key`
+- `is_primary`
+- `created_at`
+
+Notes:
+
+- media must not be stored as a flat URL-only list
+- ordering is durable per source snapshot
+- metadata is retained for selective cockpit display and future asset download pipelines
+
+### 9. `property_source_association_amenities`
+
+Repeatable association amenity child records when a provider emits structured amenities.
+
+Required fields:
+
+- `source_association_amenity_id`
+- `property_id`
+- `source_import_id`
+- `source_type`
+- `ordinal`
+- `amenity_name`
+- `amenity_category`
+- `created_at`
+
+## Expanded Field Groups Proposed
+
+### Listing Identity / Lifecycle Group
+
+- `mls_number`
+- `listing_status`
+- `listing_date`
+- `status_change_timestamp`
+- `dom`
+- `original_list_price`
+- `list_price`
+- `close_price`
+- `contingent`
+- `back_on_market_date`
+- `close_date`
+- `historical_mls_number`
+
+### Property Identity Group
 
 - `address`
 - `apn`
+- `city`
+- `state`
+- `postal_code`
+- `county`
+- `township`
+- `subdivision_name`
+- `tax_legal_description`
+- `zoning_description`
+- `latitude`
+- `longitude`
+- `directions`
+- `cross_street`
 
-### Physical Group
+### Physical Structure Group
 
 - `sqft`
 - `lot_size`
+- `lot_size_acres`
 - `year_built`
+- `levels`
+- `architectural_style`
 - `property_type`
+- `property_subtype`
+- `property_attached`
+- `new_construction`
+- `garage`
+- `garage_spaces`
+- `fireplace`
+- `waterfront`
+- `water_body_name`
+- `above_grade_finished_area`
+- `below_grade_finished_area`
+- `main_level_finished_sqft`
+- `upper_level_finished_sqft`
+- `lower_level_finished_sqft`
 - `unit_count`
 
 ### Unit / Occupancy Group
 
 - `beds`
 - `baths`
+- `bath_breakdown`
+- `rooms_total`
+
+### Interior / Exterior / Systems Group
+
+- `appliances`
+- `interior_features`
+- `exterior_features`
+- `flooring`
+- `parking_features`
+- `patio_and_porch_features`
+- `cooling`
+- `heating`
+- `utilities`
+- `water_source`
+- `sewer`
+- `roof`
+- `security_features`
+- `construction_materials`
+- `electric`
+- `laundry_features`
+- `lot_features`
+- `other_structures`
+- `basement`
+
+### Association / Taxes / Financial Terms Group
+
+- `association_name`
+- `association_phone`
+- `association_fee`
+- `association_fee_frequency`
+- `association_amenities`
+- `tax_annual_amount`
+- `tax_year`
+- `earnest_money_deposit`
+- `listing_terms`
+- `seller_concessions`
+- `buyer_financing`
+- `concessions`
+- `possession`
+
+### Remarks / Marketing / Source Text Group
+
+- `public_remarks`
+- `public_historical_remarks`
+- `documents_available`
+- `special_listing_conditions`
 
 ### Income Group
 
@@ -248,6 +512,12 @@ Exact `conflict_status` enum:
 ### Tax Group
 
 - `tax_metadata`
+
+### Child Collection Group
+
+- `rooms`
+- `media`
+- `association_amenities`
 
 ## Reconciliation Status Model
 
@@ -303,6 +573,30 @@ Conflict rule:
 
 - mark `conflicting` when CoreLogic and MLS both exist and normalize unequal
 
+### `listing_status`
+
+Selection rule:
+
+1. active manual override
+2. MLS listing status
+3. CoreLogic market status proxy when available
+
+Conflict rule:
+
+- mark `conflicting` when sources indicate materially different active vs closed state
+
+### `mls_number`
+
+Selection rule:
+
+1. active manual override
+2. MLS number
+3. historical MLS number set retained in source snapshots only
+
+Conflict rule:
+
+- mark `conflicting` when multiple active MLS identifiers compete for the same source snapshot lineage
+
 ### `apn`
 
 Selection rule:
@@ -339,6 +633,18 @@ Conflict rule:
 
 - mark `conflicting` when both exist and normalize unequal
 
+### `bath_breakdown`
+
+Selection rule:
+
+1. active manual override
+2. MLS typed bath breakdown
+3. CoreLogic bath detail breakdown
+
+Conflict rule:
+
+- mark `conflicting` when total or typed composition differs materially
+
 ### `sqft`
 
 Selection rule:
@@ -351,6 +657,18 @@ Conflict rule:
 
 - mark `conflicting` when both exist and the normalized numeric delta is greater than 5 percent
 
+### `above_grade_finished_area`, `below_grade_finished_area`, `main_level_finished_sqft`, `upper_level_finished_sqft`, `lower_level_finished_sqft`
+
+Selection rule:
+
+1. active manual override
+2. MLS finished-area components
+3. CoreLogic finished-area components
+
+Conflict rule:
+
+- mark `conflicting` when overlapping component values differ by more than 5 percent
+
 ### `lot_size`
 
 Selection rule:
@@ -362,6 +680,18 @@ Selection rule:
 Conflict rule:
 
 - mark `conflicting` when both exist and the normalized numeric delta is greater than 5 percent
+
+### `lot_size_acres`
+
+Selection rule:
+
+1. active manual override
+2. normalized acreage derived from direct source acreage field
+3. normalized acreage derived from square feet conversion
+
+Conflict rule:
+
+- mark `conflicting` when direct acreage fields materially disagree
 
 ### `year_built`
 
@@ -386,6 +716,30 @@ Selection rule:
 Conflict rule:
 
 - mark `conflicting` when normalized class values differ
+
+### `property_subtype`
+
+Selection rule:
+
+1. active manual override
+2. MLS subtype
+3. CoreLogic subtype or class extension
+
+Conflict rule:
+
+- mark `conflicting` when normalized subtype values differ
+
+### `levels`, `architectural_style`, `property_attached`, `new_construction`, `garage`, `garage_spaces`, `fireplace`, `waterfront`, `water_body_name`
+
+Selection rule:
+
+1. active manual override
+2. MLS structural field
+3. CoreLogic structural field
+
+Conflict rule:
+
+- mark `conflicting` when both sources exist and normalize unequal
 
 ### `unit_count`
 
@@ -418,6 +772,18 @@ Expected subfields:
 Conflict rule:
 
 - mark `conflicting` when either source indicates materially different rentability or rent amounts
+
+### `listing_terms`, `seller_concessions`, `buyer_financing`, `concessions`, `possession`
+
+Selection rule:
+
+1. active manual override
+2. MLS transaction term fields
+3. CoreLogic transaction term fields when available
+
+Conflict rule:
+
+- mark `conflicting` when overlapping structured term values differ materially
 
 ### `valuation_avm`
 
@@ -457,6 +823,31 @@ Conflict rule:
 
 - mark `conflicting` when overlapping subfields differ materially
 
+### `association_name`, `association_phone`, `association_fee`, `association_fee_frequency`, `association_amenities`
+
+Selection rule:
+
+1. active manual override
+2. MLS association fields
+3. CoreLogic HOA / association fields
+
+Conflict rule:
+
+- mark `conflicting` when overlapping structured association fields differ materially
+
+### `public_remarks`, `public_historical_remarks`, `documents_available`, `special_listing_conditions`
+
+Selection rule:
+
+1. active manual override
+2. MLS listing text and document metadata
+3. CoreLogic descriptive text fields when available
+
+Conflict rule:
+
+- descriptive fields are typically not blocking conflicts
+- retain source text independently even when canonical selection prefers one source
+
 ## Source Freshness Tracking
 
 Each source value surfaced to consumers must include:
@@ -479,7 +870,77 @@ V1 freshness rule:
 - the API returns freshness state, but canonical resolution does not auto-null a selected value solely for age
 - stale values remain visible and may still be canonical if no better source exists
 
-## Canonical Cockpit Payload Shape
+## Child Collection Model
+
+Repeatable child collections must remain source-snapshot scoped rather than collapsed into single canonical scalar fields.
+
+### Rooms
+
+Storage:
+
+- `property_source_rooms`
+
+Canonical handling:
+
+- room rows are source detail, not top-level canonical property truth
+- top-level canonical promotion is limited to summary fields such as `rooms_total`
+
+### Media
+
+Storage:
+
+- `property_source_media`
+
+Canonical handling:
+
+- media remains ordered source detail
+- cockpit reads may expose selected primary media separately, but durable storage keeps full ordered metadata
+
+### Association Amenities
+
+Storage:
+
+- `property_source_association_amenities`
+
+Canonical handling:
+
+- canonical property may expose summarized amenity sets, but durable ingest remains repeatable child rows
+
+## Updated Cockpit Payload Shape
+
+### 1. Source-Aware Summary View
+
+```json
+{
+  "propertyId": "prop_123",
+  "orgId": "org_123",
+  "status": {
+    "reconciliationStatus": "conflicting",
+    "unresolvedConflictCount": 2,
+    "activeManualOverrideCount": 1,
+    "lastReconciledAt": "2026-03-21T15:00:00Z"
+  },
+  "summary": {
+    "address": "123 Main St, Dallas, TX 75001",
+    "propertyType": "single_family",
+    "beds": 4,
+    "bathsTotal": 3.5,
+    "livingAreaSqft": 2480,
+    "lotSizeSqft": 8400,
+    "yearBuilt": 1998,
+    "listingStatus": "active",
+    "listPrice": 425000,
+    "valuationAmount": 418000,
+    "selectedPrimarySource": "MLS",
+    "selectedPrimarySourceFreshness": {
+      "ageDays": 1,
+      "freshnessStatus": "fresh"
+    }
+  }
+}
+```
+
+### 2. Reconciliation View
 
 ```json
 {
@@ -492,7 +953,8 @@ V1 freshness rule:
     "lastReconciledAt": "2026-03-21T15:00:00Z"
   },
   "fieldGroups": {
-    "identity": {
+    "listingIdentityLifecycle": {},
+    "propertyIdentity": {
       "address": {
         "status": "aligned",
         "canonical": {
@@ -546,8 +1008,11 @@ V1 freshness rule:
         }
       }
     },
-    "physical": {},
+    "physicalStructure": {},
     "unitOccupancy": {},
+    "interiorExteriorSystems": {},
+    "associationTaxesFinancialTerms": {},
+    "remarksMarketingSourceText": {},
     "income": {},
     "valuation": {},
     "tax": {}
@@ -555,9 +1020,87 @@ V1 freshness rule:
 }
 ```
 
+### 3. Expanded Listing Detail Drawer / Panel
+
+```json
+{
+  "propertyId": "prop_123",
+  "activeSourceSnapshot": {
+    "sourceImportId": "src_mls_20260321_001",
+    "sourceType": "MLS",
+    "mlsNumber": "MLS-998877",
+    "fetchedAt": "2026-03-21T14:00:00Z",
+    "sourceObservedAt": "2026-03-21T13:58:00Z"
+  },
+  "listingDetail": {
+    "listingIdentityLifecycle": {
+      "listingStatus": "active",
+      "listingDate": "2026-03-20",
+      "statusChangeTimestamp": "2026-03-21T09:05:00Z",
+      "dom": 3,
+      "originalListPrice": 435000,
+      "listPrice": 425000,
+      "closePrice": null,
+      "contingent": false,
+      "backOnMarketDate": null,
+      "closeDate": null,
+      "historicalMlsNumber": ["MLS-991122"]
+    },
+    "propertyIdentity": {
+      "address": "123 Main St",
+      "city": "Dallas",
+      "state": "TX",
+      "postalCode": "75001",
+      "county": "Dallas",
+      "township": null,
+      "subdivisionName": "Oak Ridge",
+      "parcelNumber": "R123456",
+      "taxLegalDescription": "Lot 5 Block 2 Oak Ridge",
+      "zoningDescription": "SF-8",
+      "latitude": 32.991,
+      "longitude": -96.802,
+      "directions": "From Main turn east on Oak",
+      "crossStreet": "Oak Ave"
+    },
+    "physicalStructure": {},
+    "interiorExteriorSystems": {},
+    "associationTaxesFinancialTerms": {},
+    "remarksMarketingSourceText": {
+      "publicRemarks": "Updated home with flexible floor plan.",
+      "publicHistoricalRemarks": [],
+      "documentsAvailable": ["seller_disclosure", "survey"],
+      "specialListingConditions": ["none"]
+    },
+    "rooms": [
+      {
+        "ordinal": 1,
+        "roomName": "Primary Bedroom",
+        "level": "Upper",
+        "length": 16,
+        "width": 14,
+        "remarks": "Walk-in closet"
+      }
+    ],
+    "media": [
+      {
+        "ordinal": 1,
+        "mediaType": "photo",
+        "mediaUrl": "https://example.test/photo-1.jpg",
+        "thumbnailUrl": "https://example.test/photo-1-thumb.jpg",
+        "caption": "Front elevation",
+        "mimeType": "image/jpeg",
+        "widthPx": 2048,
+        "heightPx": 1365,
+        "isPrimary": true
+      }
+    ]
+  }
+}
+```
+
 ## Cockpit Payload Requirements
 
-Every cockpit field node must expose:
+Every reconciliation field node must expose:
 
 - canonical value
 - all available source values
@@ -568,6 +1111,12 @@ Every cockpit field node must expose:
 
 The cockpit must not infer conflict, freshness, or override state locally.
 
+Detail drawer requirements:
+
+- source snapshot detail can expose child collections directly
+- source snapshot detail does not need to flatten rooms or media into field-level scalars
+- listing metadata and remarks may be durable source detail even when not elevated into underwriting summary cards
+
 ## Backend Implementation Notes
 
 - raw provider payloads persist in `property_source_imports`
@@ -576,6 +1125,9 @@ The cockpit must not infer conflict, freshness, or override state locally.
 - property-wide current answer persists in `properties`
 - unresolved field disagreement persists in `property_conflicts`
 - manual analyst authority persists in `property_manual_overrides`
+- room-level ingest persists in `property_source_rooms`
+- media ingest persists in `property_source_media`
+- repeatable association amenity ingest persists in `property_source_association_amenities`
 
 This preserves:
 
