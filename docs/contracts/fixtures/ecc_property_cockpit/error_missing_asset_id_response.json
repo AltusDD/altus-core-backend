@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "assetId is required"
+  }
+}

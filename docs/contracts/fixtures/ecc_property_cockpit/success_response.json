@@ -1,0 +1,54 @@
+{
+  "data": {
+    "propertyId": "asset-001",
+    "assetId": "asset-001",
+    "organizationId": null,
+    "dealId": "deal-001",
+    "transactionId": "txn-001",
+    "sourceHeaderSummary": {
+      "structuredSources": [],
+      "evidenceSources": []
+    },
+    "reconciliationSummary": {
+      "reconciliationStatus": null,
+      "unresolvedConflictCount": null,
+      "activeManualOverrideCount": null,
+      "lastReconciledAt": null
+    },
+    "evidenceMediaSummary": {
+      "importedStructuredData": {
+        "latestMlsSnapshotId": null,
+        "latestCorelogicSnapshotId": null
+      },
+      "importedMedia": {
+        "listingMediaCount": 0,
+        "hasPrimaryPhoto": false
+      },
+      "fieldEvidence": {
+        "fieldPhotoCount": 0,
+        "fieldDocumentCount": 0,
+        "lastCapturedAt": null
+      },
+      "fileStorageReferences": {
+        "dropboxFileCount": 0,
+        "verifiedReferenceCount": 0
+      },
+      "sourceTypesPresent": []
+    },
+    "transactionDocumentChecklistSummary": {
+      "checklistStatus": null,
+      "requiredItemCount": 0,
+      "receivedItemCount": 0,
+      "missingItemCount": 0,
+      "needsReviewItemCount": 0,
+      "approvedItemCount": 0,
+      "groups": []
+    },
+    "clientVisibleFileSummary": {
+      "clientVisibleCount": 0,
+      "investorVisibleCount": 0,
+      "expiringShareCount": 0,
+      "artifacts": []
+    }
+  }
+}
