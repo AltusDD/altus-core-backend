@@ -14,6 +14,8 @@ This document records the currently executable contract for the first canonical 
 - Returns a `200` JSON object with a `data` payload on success.
 - Uses database-first reads when Supabase-backed tables are available.
 - Falls back to a null-safe payload shape when schema-backed rows are not yet available.
+- Guarantees non-null summary objects for frontend consumption.
+- Uses empty arrays, zero counts, and `"unknown"` status defaults instead of summary-object nulls.
 - Returns a `400` JSON object for validation failure.
 - Returns a `500` JSON object for unexpected runtime failure.
 
@@ -46,9 +48,9 @@ Response shape:
       "evidenceSources": []
     },
     "reconciliationSummary": {
-      "reconciliationStatus": null,
-      "unresolvedConflictCount": null,
-      "activeManualOverrideCount": null,
+      "reconciliationStatus": "unknown",
+      "unresolvedConflictCount": 0,
+      "activeManualOverrideCount": 0,
       "lastReconciledAt": null
     },
     "evidenceMediaSummary": {
@@ -72,7 +74,7 @@ Response shape:
       "sourceTypesPresent": []
     },
     "transactionDocumentChecklistSummary": {
-      "checklistStatus": null,
+      "checklistStatus": "unknown",
       "requiredItemCount": 0,
       "receivedItemCount": 0,
       "missingItemCount": 0,
@@ -95,6 +97,12 @@ Notes:
 - `propertyId` is currently sourced from the property row when present; otherwise it falls back to `assetId`.
 - `sourceHeaderSummary` is backed today by current source rows when `asset_data_raw` is available.
 - `reconciliationSummary`, evidence summaries, checklist summaries, and client-visible artifact summaries read schema-backed rows when those tables exist and fall back to null-safe defaults otherwise.
+- The following objects are always present and non-null:
+  - `sourceHeaderSummary`
+  - `reconciliationSummary`
+  - `evidenceMediaSummary`
+  - `transactionDocumentChecklistSummary`
+  - `clientVisibleFileSummary`
 - Supported source types in payload logic are:
   - `MLS`
   - `CORELOGIC`

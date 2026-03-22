@@ -34,6 +34,7 @@ sys.modules.setdefault("azure", fake_azure_module)
 sys.modules.setdefault("azure.functions", fake_func_module)
 
 import ecc_property_cockpit_handler  # noqa: E402
+import ecc_property_cockpit_service  # noqa: E402
 
 
 class FakeRequest:
@@ -103,6 +104,51 @@ class EccPropertyCockpitContractTests(unittest.TestCase):
             json.loads(response.get_body().decode("utf-8")),
             load_fixture("error_internal_response.json"),
         )
+
+    def test_service_stabilizes_summary_defaults(self) -> None:
+        payload = ecc_property_cockpit_service._stabilize_property_cockpit_payload(
+            {
+                "propertyId": "asset-001",
+                "assetId": "asset-001",
+                "organizationId": None,
+                "dealId": "deal-001",
+                "transactionId": "txn-001",
+                "sourceHeaderSummary": None,
+                "reconciliationSummary": {
+                    "reconciliationStatus": None,
+                    "unresolvedConflictCount": None,
+                    "activeManualOverrideCount": None,
+                    "lastReconciledAt": None,
+                },
+                "evidenceMediaSummary": {
+                    "importedStructuredData": None,
+                    "importedMedia": None,
+                    "fieldEvidence": None,
+                    "fileStorageReferences": None,
+                    "sourceTypesPresent": None,
+                },
+                "transactionDocumentChecklistSummary": {
+                    "checklistStatus": None,
+                    "requiredItemCount": None,
+                    "receivedItemCount": None,
+                    "missingItemCount": None,
+                    "needsReviewItemCount": None,
+                    "approvedItemCount": None,
+                    "groups": None,
+                },
+                "clientVisibleFileSummary": None,
+            }
+        )
+
+        self.assertEqual(payload["sourceHeaderSummary"], {"structuredSources": [], "evidenceSources": []})
+        self.assertEqual(payload["reconciliationSummary"]["reconciliationStatus"], "unknown")
+        self.assertEqual(payload["reconciliationSummary"]["unresolvedConflictCount"], 0)
+        self.assertEqual(payload["reconciliationSummary"]["activeManualOverrideCount"], 0)
+        self.assertEqual(payload["evidenceMediaSummary"]["sourceTypesPresent"], [])
+        self.assertEqual(payload["evidenceMediaSummary"]["importedMedia"]["listingMediaCount"], 0)
+        self.assertEqual(payload["transactionDocumentChecklistSummary"]["checklistStatus"], "unknown")
+        self.assertEqual(payload["transactionDocumentChecklistSummary"]["groups"], [])
+        self.assertEqual(payload["clientVisibleFileSummary"]["artifacts"], [])
 
 
 if __name__ == "__main__":

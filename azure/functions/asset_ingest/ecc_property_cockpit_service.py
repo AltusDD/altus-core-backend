@@ -415,7 +415,7 @@ def build_property_cockpit(asset_id: str, deal_id: str | None, transaction_id: s
     if backing_payload is None:
         return fallback
 
-    return {"data": backing_payload}
+    return {"data": _stabilize_property_cockpit_payload(backing_payload)}
 
 
 def _build_default_backing_source() -> PropertyCockpitBackingSource:
@@ -450,58 +450,153 @@ def _build_empty_property_cockpit(
     transaction_id: str | None,
 ) -> dict[str, Any]:
     return {
-        "data": {
-            "propertyId": asset_id,
-            "assetId": asset_id,
-            "organizationId": None,
-            "dealId": deal_id,
-            "transactionId": transaction_id,
-            "sourceHeaderSummary": {
-                "structuredSources": [],
-                "evidenceSources": [],
-            },
-            "reconciliationSummary": {
-                "reconciliationStatus": None,
-                "unresolvedConflictCount": None,
-                "activeManualOverrideCount": None,
-                "lastReconciledAt": None,
-            },
-            "evidenceMediaSummary": {
-                "importedStructuredData": {
-                    "latestMlsSnapshotId": None,
-                    "latestCorelogicSnapshotId": None,
+        "data": _stabilize_property_cockpit_payload(
+            {
+                "propertyId": asset_id,
+                "assetId": asset_id,
+                "organizationId": None,
+                "dealId": deal_id,
+                "transactionId": transaction_id,
+                "sourceHeaderSummary": {
+                    "structuredSources": [],
+                    "evidenceSources": [],
                 },
-                "importedMedia": {
-                    "listingMediaCount": 0,
-                    "hasPrimaryPhoto": False,
+                "reconciliationSummary": {
+                    "reconciliationStatus": None,
+                    "unresolvedConflictCount": None,
+                    "activeManualOverrideCount": None,
+                    "lastReconciledAt": None,
                 },
-                "fieldEvidence": {
-                    "fieldPhotoCount": 0,
-                    "fieldDocumentCount": 0,
-                    "lastCapturedAt": None,
+                "evidenceMediaSummary": {
+                    "importedStructuredData": {
+                        "latestMlsSnapshotId": None,
+                        "latestCorelogicSnapshotId": None,
+                    },
+                    "importedMedia": {
+                        "listingMediaCount": 0,
+                        "hasPrimaryPhoto": False,
+                    },
+                    "fieldEvidence": {
+                        "fieldPhotoCount": 0,
+                        "fieldDocumentCount": 0,
+                        "lastCapturedAt": None,
+                    },
+                    "fileStorageReferences": {
+                        "dropboxFileCount": 0,
+                        "verifiedReferenceCount": 0,
+                    },
+                    "sourceTypesPresent": [],
                 },
-                "fileStorageReferences": {
-                    "dropboxFileCount": 0,
-                    "verifiedReferenceCount": 0,
+                "transactionDocumentChecklistSummary": {
+                    "checklistStatus": None,
+                    "requiredItemCount": 0,
+                    "receivedItemCount": 0,
+                    "missingItemCount": 0,
+                    "needsReviewItemCount": 0,
+                    "approvedItemCount": 0,
+                    "groups": [],
                 },
-                "sourceTypesPresent": [],
+                "clientVisibleFileSummary": {
+                    "clientVisibleCount": 0,
+                    "investorVisibleCount": 0,
+                    "expiringShareCount": 0,
+                    "artifacts": [],
+                },
+            }
+        )
+    }
+
+
+def _stabilize_property_cockpit_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    source_header = payload.get("sourceHeaderSummary")
+    if not isinstance(source_header, dict):
+        source_header = {}
+
+    reconciliation = payload.get("reconciliationSummary")
+    if not isinstance(reconciliation, dict):
+        reconciliation = {}
+
+    evidence_media = payload.get("evidenceMediaSummary")
+    if not isinstance(evidence_media, dict):
+        evidence_media = {}
+
+    imported_structured_data = evidence_media.get("importedStructuredData")
+    if not isinstance(imported_structured_data, dict):
+        imported_structured_data = {}
+
+    imported_media = evidence_media.get("importedMedia")
+    if not isinstance(imported_media, dict):
+        imported_media = {}
+
+    field_evidence = evidence_media.get("fieldEvidence")
+    if not isinstance(field_evidence, dict):
+        field_evidence = {}
+
+    file_storage_references = evidence_media.get("fileStorageReferences")
+    if not isinstance(file_storage_references, dict):
+        file_storage_references = {}
+
+    checklist = payload.get("transactionDocumentChecklistSummary")
+    if not isinstance(checklist, dict):
+        checklist = {}
+
+    client_visible = payload.get("clientVisibleFileSummary")
+    if not isinstance(client_visible, dict):
+        client_visible = {}
+
+    return {
+        "propertyId": _as_optional_string(payload.get("propertyId")) or _as_optional_string(payload.get("assetId")),
+        "assetId": _as_optional_string(payload.get("assetId")),
+        "organizationId": _as_optional_string(payload.get("organizationId")),
+        "dealId": _as_optional_string(payload.get("dealId")),
+        "transactionId": _as_optional_string(payload.get("transactionId")),
+        "sourceHeaderSummary": {
+            "structuredSources": _as_list(source_header.get("structuredSources")),
+            "evidenceSources": _as_list(source_header.get("evidenceSources")),
+        },
+        "reconciliationSummary": {
+            "reconciliationStatus": _as_optional_string(reconciliation.get("reconciliationStatus")) or "unknown",
+            "unresolvedConflictCount": _as_optional_int(reconciliation.get("unresolvedConflictCount")) or 0,
+            "activeManualOverrideCount": _as_optional_int(reconciliation.get("activeManualOverrideCount")) or 0,
+            "lastReconciledAt": _as_optional_string(reconciliation.get("lastReconciledAt")),
+        },
+        "evidenceMediaSummary": {
+            "importedStructuredData": {
+                "latestMlsSnapshotId": _as_optional_string(imported_structured_data.get("latestMlsSnapshotId")),
+                "latestCorelogicSnapshotId": _as_optional_string(
+                    imported_structured_data.get("latestCorelogicSnapshotId")
+                ),
             },
-            "transactionDocumentChecklistSummary": {
-                "checklistStatus": None,
-                "requiredItemCount": 0,
-                "receivedItemCount": 0,
-                "missingItemCount": 0,
-                "needsReviewItemCount": 0,
-                "approvedItemCount": 0,
-                "groups": [],
+            "importedMedia": {
+                "listingMediaCount": _as_optional_int(imported_media.get("listingMediaCount")) or 0,
+                "hasPrimaryPhoto": imported_media.get("hasPrimaryPhoto") is True,
             },
-            "clientVisibleFileSummary": {
-                "clientVisibleCount": 0,
-                "investorVisibleCount": 0,
-                "expiringShareCount": 0,
-                "artifacts": [],
+            "fieldEvidence": {
+                "fieldPhotoCount": _as_optional_int(field_evidence.get("fieldPhotoCount")) or 0,
+                "fieldDocumentCount": _as_optional_int(field_evidence.get("fieldDocumentCount")) or 0,
+                "lastCapturedAt": _as_optional_string(field_evidence.get("lastCapturedAt")),
             },
-        }
+            "fileStorageReferences": {
+                "dropboxFileCount": _as_optional_int(file_storage_references.get("dropboxFileCount")) or 0,
+                "verifiedReferenceCount": _as_optional_int(file_storage_references.get("verifiedReferenceCount")) or 0,
+            },
+            "sourceTypesPresent": _as_list(evidence_media.get("sourceTypesPresent")),
+        },
+        "transactionDocumentChecklistSummary": {
+            "checklistStatus": _as_optional_string(checklist.get("checklistStatus")) or "unknown",
+            "requiredItemCount": _as_optional_int(checklist.get("requiredItemCount")) or 0,
+            "receivedItemCount": _as_optional_int(checklist.get("receivedItemCount")) or 0,
+            "missingItemCount": _as_optional_int(checklist.get("missingItemCount")) or 0,
+            "needsReviewItemCount": _as_optional_int(checklist.get("needsReviewItemCount")) or 0,
+            "approvedItemCount": _as_optional_int(checklist.get("approvedItemCount")) or 0,
+            "groups": _as_list(checklist.get("groups")),
+        },
+        "clientVisibleFileSummary": {
+            "clientVisibleCount": _as_optional_int(client_visible.get("clientVisibleCount")) or 0,
+            "investorVisibleCount": _as_optional_int(client_visible.get("investorVisibleCount")) or 0,
+            "expiringShareCount": _as_optional_int(client_visible.get("expiringShareCount")) or 0,
+            "artifacts": _as_list(client_visible.get("artifacts")),
+        },
     }
 
 
@@ -530,6 +625,12 @@ def _as_optional_string(value: object) -> str | None:
 def _as_optional_int(value: object) -> int | None:
     if value is None:
         return None
+
+
+def _as_list(value: object) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    return []
     try:
         return int(value)
     except (TypeError, ValueError):

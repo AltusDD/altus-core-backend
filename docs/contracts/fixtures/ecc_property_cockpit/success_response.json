@@ -10,9 +10,9 @@
       "evidenceSources": []
     },
     "reconciliationSummary": {
-      "reconciliationStatus": null,
-      "unresolvedConflictCount": null,
-      "activeManualOverrideCount": null,
+      "reconciliationStatus": "unknown",
+      "unresolvedConflictCount": 0,
+      "activeManualOverrideCount": 0,
       "lastReconciledAt": null
     },
     "evidenceMediaSummary": {
@@ -36,7 +36,7 @@
       "sourceTypesPresent": []
     },
     "transactionDocumentChecklistSummary": {
-      "checklistStatus": null,
+      "checklistStatus": "unknown",
       "requiredItemCount": 0,
       "receivedItemCount": 0,
       "missingItemCount": 0,
