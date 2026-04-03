@@ -1,0 +1,12 @@
+{
+  "strategy": "flip",
+  "purchasePrice": "120000",
+  "afterRepairValue": "220000",
+  "rehabCost": "30000",
+  "holdingCosts": "8000",
+  "closingCosts": "7000",
+  "cashAvailable": "60000",
+  "rentMonthly": "2500",
+  "operatingExpenseMonthly": "900",
+  "targetProfitMargin": "0.12"
+}

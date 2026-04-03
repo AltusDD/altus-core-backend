@@ -14,6 +14,7 @@ from ecc_portfolio_assets_handler import handle_ecc_portfolio_assets
 from ecc_asset_search_handler import handle_ecc_asset_search
 from ecc_asset_metrics_handler import handle_ecc_asset_metrics
 from ecc_system_health_handler import handle_ecc_system_health
+from price_engine_calculations_preview_handler import handle_price_engine_calculations_preview
 from price_engine_handler import handle_price_engine_calculate
 from title_rate_handler import handle_title_rate_quote
 
@@ -209,6 +210,11 @@ def ecc_system_health(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="price-engine/calculate", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def price_engine_calculate(req: func.HttpRequest) -> func.HttpResponse:
     return handle_price_engine_calculate(req, _build_headers)
+
+
+@app.route(route="price-engine/calculations-preview", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def price_engine_calculations_preview(req: func.HttpRequest) -> func.HttpResponse:
+    return handle_price_engine_calculations_preview(req, _build_headers)
 
 
 @app.route(route="price-engine/title-rate-quote", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)

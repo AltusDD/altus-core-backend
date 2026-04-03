@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "purchasePrice is required",
+    "details": null
+  }
+}

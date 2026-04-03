@@ -27,6 +27,15 @@ This document records the currently executable contract for the price engine cal
 
 - `rentMonthly`
 - `operatingExpenseMonthly`
+- `sellingCosts`
+- `reserves`
+- `points`
+- `pointsRate`
+- `loanAmount`
+- `financedLtv`
+- `holdingMonths`
+- `interestRateAnnual`
+- `amortizationMonths`
 - `targetProfitMargin`
 
 ## Supported Strategy Values
@@ -57,6 +66,8 @@ Notes:
 - Success response is a flat JSON object, not wrapped in `data`.
 - Currency-like numeric fields are rounded to two decimals.
 - `RiskScore` is returned as an integer.
+- `IRR` is annualized from monthly hold-period cash flows.
+- `CoC` uses annual net operating cash flow divided by upfront cash to close.
 
 ## Error Contract
 
