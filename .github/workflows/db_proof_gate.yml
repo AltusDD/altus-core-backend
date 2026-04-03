@@ -32,14 +32,36 @@ jobs:
 
       - name: Run DB proof guard
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p _db_proof
           if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Fetch the *live* PR body from the GitHub API so that reruns always
+            # evaluate the current PR description, not the stale body captured
+            # in the event payload at original-trigger time (GITHUB_EVENT_PATH).
+            pr_number="${{ github.event.pull_request.number }}"
+            repo="${{ github.repository }}"
+
+            curl -sSf \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${repo}/pulls/${pr_number}" \
+              > _db_proof/live_pr.json
+
+            # Build a minimal synthetic event file containing the live PR body
+            # so db_proof_guard.py receives the current description on every run.
+            jq '{pull_request: {number: .number, body: (.body // ""), base: {sha: (.base.sha // "")}, head: {sha: (.head.sha // "")}}}' \
+              _db_proof/live_pr.json > _db_proof/live_pr_event.json
+
+            base_sha=$(jq -r '.pull_request.base.sha' _db_proof/live_pr_event.json)
+            head_sha=$(jq -r '.pull_request.head.sha' _db_proof/live_pr_event.json)
+
             python3 tools/db_proof_guard.py \
-              --event-path "${GITHUB_EVENT_PATH}" \
-              --base-sha "${{ github.event.pull_request.base.sha }}" \
-              --head-sha "${{ github.event.pull_request.head.sha }}" \
+              --event-path "_db_proof/live_pr_event.json" \
+              --base-sha "${base_sha}" \
+              --head-sha "${head_sha}" \
               --proof-dir "_db_proof" | tee "_db_proof/db_proof_gate.txt"
           else
             python3 tools/db_proof_guard.py \
