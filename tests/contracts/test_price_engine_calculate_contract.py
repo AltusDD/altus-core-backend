@@ -29,6 +29,8 @@ fake_func_module = types.SimpleNamespace(
     HttpResponse=FakeHttpResponse,
     HttpRequest=object,
 )
+fake_azure_module = types.SimpleNamespace(functions=fake_func_module)
+sys.modules.setdefault('azure', fake_azure_module)
 sys.modules.setdefault('azure.functions', fake_func_module)
 
 from price_engine_handler import handle_price_engine_calculate  # noqa: E402

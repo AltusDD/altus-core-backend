@@ -8,5 +8,15 @@
   "cashAvailable": 60000,
   "rentMonthly": 2500,
   "operatingExpenseMonthly": 900,
+  "loanOriginationFee": 1500,
+  "underwritingFee": 995,
+  "processingFee": 695,
+  "appraisalFee": 550,
+  "creditReportFee": 85,
+  "titlePremium": 1800,
+  "settlementFee": 850,
+  "recordingFee": 225,
+  "ownerPolicy": 450,
+  "lenderPolicy": 375,
   "targetProfitMargin": 0.12
 }
