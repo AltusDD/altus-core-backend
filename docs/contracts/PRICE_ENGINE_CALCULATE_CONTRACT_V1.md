@@ -58,6 +58,12 @@ This document records the currently executable contract for the price engine cal
 - `annualInterestRate`
 - `interestRateAnnual`
 - `interestOnly`
+- `exitSalePrice`
+- `saleCommissionRate`
+- `sellerClosingCostRate`
+- `dispositionFee`
+- `sellerConcessions`
+- `otherExitCosts`
 
 ## Supported Strategy Values
 
@@ -88,7 +94,11 @@ Response shape:
   "FinancedTransactionCosts": 0.0,
   "MonthlyDebtService": 0.0,
   "TotalInterestCarry": 0.0,
-  "DebtServiceType": "amortized"
+  "DebtServiceType": "amortized",
+  "GrossSaleProceeds": 0.0,
+  "TotalExitCosts": 0.0,
+  "ExitLoanPayoff": 0.0,
+  "NetDispositionProceeds": 0.0
 }
 ```
 
@@ -107,6 +117,10 @@ Notes:
 - `MonthlyDebtService` is the normalized monthly financing obligation generated from the effective financed principal.
 - `TotalInterestCarry` is the deterministic interest portion accumulated across the hold period.
 - `DebtServiceType` is `interest-only`, `amortized`, or `none`.
+- `GrossSaleProceeds` uses `exitSalePrice` when provided and otherwise defaults to `afterRepairValue`.
+- `TotalExitCosts` normalizes sale commission, seller closing costs, disposition fee, seller concessions, and other exit costs into one canonical disposition stack.
+- `ExitLoanPayoff` is the financed principal payoff required at disposition after carry normalization.
+- `NetDispositionProceeds` is `GrossSaleProceeds - TotalExitCosts - ExitLoanPayoff`.
 - When no approved live title-rate provider is configured, the route uses the existing stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
 
 ## Error Contract

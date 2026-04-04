@@ -65,6 +65,12 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "holdingMonths": 12,
                 "interestOnly": False,
                 "amortizationMonths": 360,
+                "exitSalePrice": 225000,
+                "saleCommissionRate": 0.06,
+                "sellerClosingCostRate": 0.02,
+                "dispositionFee": 1500,
+                "sellerConcessions": 2500,
+                "otherExitCosts": 1000,
             }
         )
 
@@ -76,9 +82,12 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(calculate_financed_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("5745.00"))
         self.assertEqual(inputs.monthly_debt_service.quantize(Decimal("0.01")), Decimal("746.57"))
         self.assertEqual(inputs.total_interest_carry.quantize(Decimal("0.01")), Decimal("8108.88"))
-        self.assertEqual(calculate_mao(inputs).quantize(Decimal("0.01")), Decimal("113446.12"))
+        self.assertEqual(inputs.gross_sale_proceeds.quantize(Decimal("0.01")), Decimal("225000.00"))
+        self.assertEqual(inputs.total_exit_costs.quantize(Decimal("0.01")), Decimal("23000.00"))
+        self.assertEqual(inputs.net_disposition_proceeds.quantize(Decimal("0.01")), Decimal("101104.94"))
+        self.assertEqual(calculate_mao(inputs).quantize(Decimal("0.01")), Decimal("112446.12"))
         self.assertEqual(calculate_cash_on_cash(inputs).quantize(Decimal("0.01")), Decimal("15.83"))
-        self.assertEqual(calculate_irr(inputs).quantize(Decimal("0.01")), Decimal("77.77"))
+        self.assertEqual(calculate_irr(inputs).quantize(Decimal("0.01")), Decimal("77.12"))
 
     def test_service_uses_stub_title_quote_when_provider_is_unavailable(self) -> None:
         os.environ.pop("PRICE_ENGINE_TITLE_RATE_PROVIDER", None)
@@ -114,6 +123,12 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "holdingMonths": 12,
                 "interestOnly": False,
                 "amortizationMonths": 360,
+                "exitSalePrice": 225000,
+                "saleCommissionRate": 0.06,
+                "sellerClosingCostRate": 0.02,
+                "dispositionFee": 1500,
+                "sellerConcessions": 2500,
+                "otherExitCosts": 1000,
             }
         )
 
@@ -127,6 +142,10 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(metrics["MonthlyDebtService"], 746.57)
         self.assertEqual(metrics["TotalInterestCarry"], 8108.88)
         self.assertEqual(metrics["DebtServiceType"], "amortized")
+        self.assertEqual(metrics["GrossSaleProceeds"], 225000.0)
+        self.assertEqual(metrics["TotalExitCosts"], 23000.0)
+        self.assertEqual(metrics["ExitLoanPayoff"], 100895.06)
+        self.assertEqual(metrics["NetDispositionProceeds"], 101104.94)
 
 
 if __name__ == "__main__":
