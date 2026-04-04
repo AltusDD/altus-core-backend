@@ -1,0 +1,14 @@
+## Pull Request Description
+
+<!-- db-proof-gate:start -->
+schema_change_claimed: no
+verification_sql_present: no
+changed_objects:
+  - none
+rollback_note: Revert PR #76 to remove additive lender/title fee transaction-cost inputs and outputs and restore the prior Price Engine calculation surface.
+contract_or_data_map_changed: no
+unknowns:
+  - none
+<!-- db-proof-gate:end -->
+
+Please review this PR as it addresses important changes made to the Price Engine calculation surface.
