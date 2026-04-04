@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 from price_engine_calculations import DealInputs
+from price_engine_title_quote_context import PriceEngineTitleQuoteContext
 from title_rate_provider import (
     StubTitleRateProvider,
     TitleRateProviderError,
@@ -24,16 +25,25 @@ _FALLBACK_TITLE_FEES = {
 
 
 def enrich_payload_with_title_quote(payload: dict[str, Any], inputs: DealInputs) -> dict[str, Any]:
-    title_fee_inputs = resolve_title_fee_inputs(payload, inputs)
+    title_quote_context = resolve_title_fee_inputs(payload, inputs)
     enriched = dict(payload)
-    enriched.update(title_fee_inputs)
+    enriched.update(title_quote_context.fee_inputs)
     return enriched
 
 
-def resolve_title_fee_inputs(payload: dict[str, Any], inputs: DealInputs) -> dict[str, float]:
+def resolve_title_fee_inputs(payload: dict[str, Any], inputs: DealInputs) -> PriceEngineTitleQuoteContext:
     request_payload = build_title_quote_request_payload(payload, inputs)
     if request_payload is None:
-        return dict(_FALLBACK_TITLE_FEES)
+        return PriceEngineTitleQuoteContext(
+            fee_inputs=dict(_FALLBACK_TITLE_FEES),
+            provider_key=None,
+            status=None,
+            quote_reference=None,
+            expires_at=None,
+            warnings=[],
+            assumptions=[],
+            provider_context={},
+        )
 
     request = parse_title_rate_quote_request(request_payload)
 
@@ -45,7 +55,17 @@ def resolve_title_fee_inputs(payload: dict[str, Any], inputs: DealInputs) -> dic
             raise
         result = StubTitleRateProvider().quote(request)
 
-    return map_title_quote_to_calculation_inputs(serialize_title_rate_quote_result(result))
+    serialized = serialize_title_rate_quote_result(result)
+    return PriceEngineTitleQuoteContext(
+        fee_inputs=map_title_quote_to_calculation_inputs(serialized),
+        provider_key=serialized.get("providerKey"),
+        status=serialized.get("status"),
+        quote_reference=serialized.get("quoteReference"),
+        expires_at=serialized.get("expiresAt"),
+        warnings=list(serialized.get("warnings") or []),
+        assumptions=list(serialized.get("assumptions") or []),
+        provider_context=serialized.get("providerContext") or {},
+    )
 
 
 def build_title_quote_request_payload(payload: dict[str, Any], inputs: DealInputs) -> dict[str, Any] | None:

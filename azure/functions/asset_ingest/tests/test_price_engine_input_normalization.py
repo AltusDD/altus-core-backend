@@ -31,7 +31,8 @@ class PriceEngineInputNormalizationTests(unittest.TestCase):
         self.assertIn("annualInterestRate", normalized.applied_preset_fields)
         self.assertIn("interestOnly", normalized.applied_preset_fields)
         self.assertIn("saleCommissionRate", normalized.applied_preset_fields)
-        self.assertEqual(normalized.validation_warnings, [])
+        self.assertTrue(normalized.validation_warnings)
+        self.assertIn("Scenario preset defaults were applied", normalized.validation_warnings[0])
 
     def test_rental_hold_preset_populates_expected_defaults(self) -> None:
         normalized = normalize_price_engine_payload(

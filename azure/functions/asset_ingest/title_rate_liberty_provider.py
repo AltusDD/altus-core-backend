@@ -70,6 +70,9 @@ class LibertyTitleRateProvider:
                 warning
                 for warning in (
                     "Liberty public iframe currently exposes a tokenized app launch rather than a documented backend quote API.",
+                    "Legacy Liberty quote alias was normalized into the canonical snapshot ingest shape."
+                    if snapshot.snapshot_version == "legacy-v0"
+                    else None,
                     snapshot.warning,
                 )
                 if warning
@@ -82,6 +85,8 @@ class LibertyTitleRateProvider:
                 "snapshotVersion": snapshot.snapshot_version,
                 "quotedAt": snapshot.quoted_at,
                 "capturedAt": snapshot.captured_at,
+                "exportArtifactId": snapshot.export_artifact_id,
+                "exportArtifactType": snapshot.export_artifact_type,
                 "automationAvailable": False,
             },
         )
@@ -125,4 +130,3 @@ def _line_item(code: str, category: str, description: str, amount: Decimal) -> T
         description=description,
         amount=amount,
     )
-

@@ -12,6 +12,8 @@ class LibertyQuoteSnapshot:
     quote_reference: str
     snapshot_version: str
     source: str
+    export_artifact_id: str | None
+    export_artifact_type: str | None
     quoted_at: str | None
     captured_at: str | None
     expires_at: str | None
@@ -54,6 +56,8 @@ def _normalize_canonical_snapshot(snapshot: dict[str, Any]) -> LibertyQuoteSnaps
         quote_reference=quote_reference,
         snapshot_version=snapshot_version,
         source=source,
+        export_artifact_id=_optional_string(snapshot.get("exportArtifactId")),
+        export_artifact_type=_optional_string(snapshot.get("exportArtifactType")),
         quoted_at=_optional_string(snapshot.get("quotedAt")),
         captured_at=_optional_string(snapshot.get("capturedAt")),
         expires_at=_optional_string(snapshot.get("expiresAt")),
@@ -75,6 +79,8 @@ def _normalize_legacy_snapshot(snapshot: dict[str, Any]) -> LibertyQuoteSnapshot
         quote_reference=quote_reference,
         snapshot_version="legacy-v0",
         source="liberty_iframe_snapshot_legacy",
+        export_artifact_id=None,
+        export_artifact_type=None,
         quoted_at=None,
         captured_at=None,
         expires_at=_optional_string(snapshot.get("expiresAt")),

@@ -20,5 +20,194 @@
   "NetDispositionProceeds": 101104.94,
   "ScenarioProfile": "flip",
   "AppliedPresetFields": [],
-  "ValidationWarnings": []
+  "ValidationWarnings": [],
+  "Disclaimers": {
+    "calculation": {
+      "message": "Calculated outputs are deterministic underwriting estimates based on the inputs and modeled assumptions provided to this backend response.",
+      "warnings": []
+    },
+    "dataSources": {
+      "message": "Third-party source data, including vendor quote inputs and mapped property data, is normalized for modeling but may be incomplete, delayed, or unavailable at the time of calculation.",
+      "warnings": []
+    },
+    "useDecision": {
+      "message": "This response is decision-support output only and must not be treated as legal, title, lending, appraisal, or investment advice or as a binding commitment.",
+      "warnings": []
+    }
+  },
+  "Provenance": {
+    "titleQuote": {
+      "provider": "stub",
+      "status": "stub",
+      "source": "stub",
+      "quoteReference": null,
+      "snapshotVersion": null,
+      "quotedAt": null,
+      "capturedAt": null,
+      "expiresAt": null,
+      "sourceWarnings": [
+        "Stub response only. Vendor implementation remains disabled pending an approved API or documented embed bridge."
+      ],
+      "sourceWarningCodes": [
+        "stub_provider_used"
+      ],
+      "sourceWarningSeverities": [
+        "info"
+      ],
+      "warningFamilies": [
+        "provider"
+      ],
+      "warningFamilySummary": [
+        "provider"
+      ],
+      "warningFamilySummaryLabel": "provider",
+      "warningFamilyDisplayPriority": "provider",
+      "warningFamilyDisplayLabel": "Provider Warning",
+      "warningFamilyDisplaySeverity": "info",
+      "warningFamilyDisplayCount": 1,
+      "warningSummary": {
+        "highestSeverity": "info",
+        "hasCritical": false,
+        "hasWarning": false,
+        "hasInfo": true
+      },
+      "warningCounts": {
+        "critical": 0,
+        "warning": 0,
+        "info": 1,
+        "total": 1
+      },
+      "warningFamilyCounts": {
+        "provider": 1,
+        "snapshot": 0,
+        "fallback": 0,
+        "compatibility": 0,
+        "availability": 0
+      },
+      "exportArtifactId": null,
+      "exportArtifactType": null,
+      "exportTraceKey": null,
+      "sourceTraceKey": "stub:stub:stub",
+      "snapshotTraceKey": null,
+      "sourceEventType": "title_quote_stub",
+      "snapshotEventType": null,
+      "sourceEventRef": "source-event:stub:stub:stub",
+      "snapshotEventRef": null,
+      "sourceEventBundle": {
+        "sourceEventType": "title_quote_stub",
+        "sourceEventRef": "source-event:stub:stub:stub",
+        "snapshotEventType": null,
+        "snapshotEventRef": null,
+        "status": "partial",
+        "statusLabel": "Partial Event Bundle",
+        "hasSourceEvent": true,
+        "hasSnapshotEvent": false,
+        "isComplete": false
+      },
+      "integrationProvider": "corelogic",
+      "integrationMode": "disabled",
+      "integrationState": "inactive",
+      "integrationStateLabel": "Integration Inactive",
+      "integrationReasonCodes": [
+        "integration_disabled",
+        "mode_disabled"
+      ],
+      "integrationLiveReady": false,
+      "integrationLiveReadyLabel": "Live Integration Not Ready",
+      "integrationCredentialState": "missing",
+      "integrationCredentialStateLabel": "Credentials Missing",
+      "integrationGuardSummary": "disabled",
+      "integrationArtifactType": null,
+      "integrationArtifactId": null,
+      "integrationTraceKey": null,
+      "integrationEventType": null,
+      "integrationEventRef": null,
+      "integrationMockProfile": null,
+      "integrationMockProfileLabel": null,
+      "integrationResultType": null,
+      "integrationExecutionState": null,
+      "integrationQuoteReference": null,
+      "integrationSnapshotVersion": null,
+      "integrationPayloadProfile": null,
+      "integrationEstimatedTotalTitleCost": null,
+      "integrationCurrency": null,
+      "integrationEstimatedTitleFee": null,
+      "integrationEstimatedSettlementFee": null,
+      "integrationEstimatedRecordingFee": null,
+      "integrationEstimatedSearchFee": null,
+      "integrationEstimatedMiscFee": null,
+      "integrationFeeLineSum": null,
+      "integrationFeeDelta": null,
+      "integrationFeeReconciliationStatus": null,
+      "integrationFeeReconciliationLabel": null,
+      "integrationFeeReconciliationMatch": null,
+      "integrationBundleStatus": null,
+      "integrationBundleStatusLabel": null,
+      "integrationHasArtifact": null,
+      "integrationHasTrace": null,
+      "integrationHasEvent": null,
+      "integrationIsExportReady": null,
+      "integrationExportReadiness": null,
+      "integrationExportReadinessLabel": null,
+      "integrationExportReasonCodes": null,
+      "integrationAuditCompleteness": null,
+      "integrationAuditCompletenessLabel": null,
+      "integrationSummaryStatus": null,
+      "integrationSummaryStatusLabel": null,
+      "integrationSummaryPriority": null,
+      "integrationSummaryPriorityLabel": null,
+      "integrationSummaryReasonCodes": null,
+      "integrationDisplayBadge": null,
+      "integrationDisplayBadgeLabel": null,
+      "integrationDisplaySeverity": null,
+      "integrationDisplayOrder": null,
+      "integrationDisplayReason": null,
+      "integrationOperatorAction": null,
+      "integrationOperatorActionLabel": null,
+      "integrationOperatorActionPriority": null,
+      "integrationOperatorActionReasonCodes": null,
+      "integrationOperatorActionBlocking": null,
+      "integrationOperatorSnapshotStatus": null,
+      "integrationOperatorSnapshotLabel": null,
+      "integrationOperatorSnapshotSeverity": null,
+      "integrationOperatorSnapshotOrder": null,
+      "integrationOperatorSnapshotReasonCodes": null,
+      "integrationOperatorCardStatus": null,
+      "integrationOperatorCardLabel": null,
+      "integrationOperatorCardSeverity": null,
+      "integrationOperatorCardOrder": null,
+      "integrationOperatorCardReasonCodes": null,
+      "integrationExportPacketStatus": null,
+      "integrationExportPacketLabel": null,
+      "integrationExportPacketCompleteness": null,
+      "integrationExportPacketMissing": null,
+      "integrationExportPacketReady": null,
+      "integrationExportPacketSummaryStatus": null,
+      "integrationExportPacketSummaryLabel": null,
+      "integrationExportPacketSummaryPriority": null,
+      "integrationExportPacketSummaryReasonCodes": null,
+      "integrationExportPacketSummaryBlocking": null,
+      "exportReadiness": "blocked",
+      "exportReadinessLabel": "Export Blocked",
+      "exportReadinessReasonCodes": [
+        "missing_export_artifact",
+        "missing_export_trace",
+        "missing_quote_reference",
+        "missing_snapshot_version",
+        "missing_snapshot_trace",
+        "missing_snapshot_event",
+        "warning_present"
+      ],
+      "auditCompleteness": "partial",
+      "auditCompletenessLabel": "Audit Partial"
+    },
+    "scenario": {
+      "profile": "flip",
+      "appliedPresetFields": [],
+      "validationWarnings": []
+    },
+    "trace": {
+      "generatedAt": null
+    }
+  }
 }

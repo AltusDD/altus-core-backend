@@ -95,11 +95,17 @@ def normalize_price_engine_payload(payload: dict[str, Any]) -> NormalizedPriceEn
     _validate_positive_int(normalized, "holdingMonths")
     _validate_positive_int(normalized, "amortizationMonths")
 
+    validation_warnings: list[str] = []
+    if applied_fields:
+        validation_warnings.append(
+            "Scenario preset defaults were applied for missing fields: " + ", ".join(applied_fields) + "."
+        )
+
     return NormalizedPriceEnginePayload(
         payload=normalized,
         scenario_profile=strategy,
         applied_preset_fields=applied_fields,
-        validation_warnings=[],
+        validation_warnings=validation_warnings,
     )
 
 
