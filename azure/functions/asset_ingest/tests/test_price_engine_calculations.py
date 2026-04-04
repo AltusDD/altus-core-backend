@@ -61,6 +61,10 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "recordingFee": 225,
                 "ownerPolicy": 450,
                 "lenderPolicy": 375,
+                "annualInterestRate": 0.08,
+                "holdingMonths": 12,
+                "interestOnly": False,
+                "amortizationMonths": 360,
             }
         )
 
@@ -70,9 +74,11 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(calculate_total_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("16445.00"))
         self.assertEqual(calculate_cash_paid_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("3700.00"))
         self.assertEqual(calculate_financed_transaction_costs(inputs).quantize(Decimal("0.01")), Decimal("5745.00"))
-        self.assertEqual(calculate_mao(inputs).quantize(Decimal("0.01")), Decimal("121555.00"))
-        self.assertEqual(calculate_cash_on_cash(inputs).quantize(Decimal("0.01")), Decimal("29.68"))
-        self.assertEqual(calculate_irr(inputs).quantize(Decimal("0.01")), Decimal("96.82"))
+        self.assertEqual(inputs.monthly_debt_service.quantize(Decimal("0.01")), Decimal("746.57"))
+        self.assertEqual(inputs.total_interest_carry.quantize(Decimal("0.01")), Decimal("8108.88"))
+        self.assertEqual(calculate_mao(inputs).quantize(Decimal("0.01")), Decimal("113446.12"))
+        self.assertEqual(calculate_cash_on_cash(inputs).quantize(Decimal("0.01")), Decimal("15.83"))
+        self.assertEqual(calculate_irr(inputs).quantize(Decimal("0.01")), Decimal("77.77"))
 
     def test_service_uses_stub_title_quote_when_provider_is_unavailable(self) -> None:
         os.environ.pop("PRICE_ENGINE_TITLE_RATE_PROVIDER", None)
@@ -104,6 +110,10 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "postalCode": "64108",
                 "endorsements": ["CPL", "T-19"],
                 "transactionDate": "2026-03-18",
+                "annualInterestRate": 0.08,
+                "holdingMonths": 12,
+                "interestOnly": False,
+                "amortizationMonths": 360,
             }
         )
 
@@ -114,6 +124,9 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(metrics["FinancedTransactionCosts"], 5745.0)
         self.assertEqual(metrics["TotalTransactionCosts"], 12745.0)
         self.assertEqual(metrics["CashToClose"], 61000.0)
+        self.assertEqual(metrics["MonthlyDebtService"], 746.57)
+        self.assertEqual(metrics["TotalInterestCarry"], 8108.88)
+        self.assertEqual(metrics["DebtServiceType"], "amortized")
 
 
 if __name__ == "__main__":

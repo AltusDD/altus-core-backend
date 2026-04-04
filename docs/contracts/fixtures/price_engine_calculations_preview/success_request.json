@@ -23,5 +23,9 @@
   "postalCode": "64108",
   "endorsements": ["CPL", "T-19"],
   "transactionDate": "2026-03-18",
+  "annualInterestRate": "0.08",
+  "holdingMonths": "12",
+  "interestOnly": "false",
+  "amortizationMonths": "360",
   "targetProfitMargin": "0.12"
 }

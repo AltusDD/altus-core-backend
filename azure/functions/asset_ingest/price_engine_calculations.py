@@ -5,6 +5,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from price_engine_errors import PriceEngineError
+from price_engine_financing_carry import build_financing_carry
 from price_engine_financing_treatment import build_financing_treatment
 
 _ALLOWED_STRATEGIES = {"flip", "rental_hold", "brrrr"}
@@ -50,6 +51,11 @@ class DealInputs:
     cash_paid_transaction_costs: Decimal
     financed_transaction_costs: Decimal
     effective_loan_payoff: Decimal
+    exit_loan_payoff: Decimal
+    monthly_debt_service: Decimal
+    total_interest_carry: Decimal
+    debt_service_type: str
+    interest_only: bool
     loan_amount: Decimal
     financed_ltv: Decimal
     holding_months: int
@@ -93,6 +99,9 @@ def calculate_price_engine_from_inputs(inputs: DealInputs) -> dict[str, Any]:
         "TotalPoints": _round_currency(inputs.total_points),
         "CashPaidTransactionCosts": _round_currency(calculate_cash_paid_transaction_costs(inputs)),
         "FinancedTransactionCosts": _round_currency(calculate_financed_transaction_costs(inputs)),
+        "MonthlyDebtService": _round_currency(inputs.monthly_debt_service),
+        "TotalInterestCarry": _round_currency(inputs.total_interest_carry),
+        "DebtServiceType": inputs.debt_service_type,
     }
 
 
@@ -130,7 +139,12 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
     implied_loan_amount = purchase_price * financed_ltv
     loan_amount = _decimal_field(payload, "loanAmount", required=False, default=implied_loan_amount)
     points = _decimal_field(payload, "points", required=False, default=Decimal("0"))
-    interest_rate_annual = _decimal_field(payload, "interestRateAnnual", required=False, default=Decimal("0.08"))
+    interest_rate_annual = _aliased_decimal_field(
+        payload,
+        primary_field_name="annualInterestRate",
+        secondary_field_name="interestRateAnnual",
+        default=Decimal("0.08"),
+    )
     amortization_months = _int_field(payload, "amortizationMonths", default=360, minimum=1)
     target_profit_margin = _decimal_field(payload, "targetProfitMargin", required=False, default=Decimal("0.10"))
     total_lender_fees = (
@@ -153,6 +167,13 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
         total_lender_fees=total_lender_fees,
         total_title_fees=total_title_fees,
         explicit_points=points,
+    )
+    financing_carry = build_financing_carry(
+        payload,
+        effective_principal=financing_treatment.effective_loan_payoff,
+        annual_interest_rate=interest_rate_annual,
+        holding_months=holding_months,
+        amortization_months=amortization_months,
     )
 
     numeric_fields = (
@@ -221,6 +242,11 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
         cash_paid_transaction_costs=financing_treatment.cash_paid_transaction_costs,
         financed_transaction_costs=financing_treatment.financed_transaction_costs,
         effective_loan_payoff=financing_treatment.effective_loan_payoff,
+        exit_loan_payoff=financing_carry.exit_loan_payoff,
+        monthly_debt_service=financing_carry.monthly_debt_service,
+        total_interest_carry=financing_carry.total_interest_carry,
+        debt_service_type=financing_carry.debt_service_type,
+        interest_only=financing_carry.interest_only,
         loan_amount=loan_amount,
         financed_ltv=financed_ltv,
         holding_months=holding_months,
@@ -233,7 +259,7 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
 def calculate_mao(inputs: DealInputs) -> Decimal:
     net_sale_proceeds = inputs.after_repair_value - inputs.selling_costs
     target_profit = inputs.after_repair_value * inputs.target_profit_margin
-    return net_sale_proceeds - inputs.rehab_cost - inputs.holding_costs - calculate_total_transaction_costs(inputs) - target_profit
+    return net_sale_proceeds - inputs.rehab_cost - calculate_effective_holding_costs(inputs) - calculate_total_transaction_costs(inputs) - target_profit
 
 
 def calculate_cash_to_close(inputs: DealInputs) -> Decimal:
@@ -243,14 +269,14 @@ def calculate_cash_to_close(inputs: DealInputs) -> Decimal:
 
 def calculate_cash_on_cash(inputs: DealInputs, cash_to_close: Decimal | None = None) -> Decimal:
     effective_cash_to_close = cash_to_close if cash_to_close is not None else calculate_cash_to_close(inputs)
-    annual_income = (inputs.rent_monthly - inputs.operating_expense_monthly) * Decimal("12")
+    annual_income = calculate_monthly_levered_cash_flow(inputs) * Decimal("12")
     return (annual_income / effective_cash_to_close) * Decimal("100")
 
 
 def calculate_irr(inputs: DealInputs, cash_to_close: Decimal | None = None) -> Decimal:
     effective_cash_to_close = cash_to_close if cash_to_close is not None else calculate_cash_to_close(inputs)
-    monthly_income = inputs.rent_monthly - inputs.operating_expense_monthly
-    terminal_value = inputs.after_repair_value - inputs.selling_costs - inputs.effective_loan_payoff
+    monthly_income = calculate_monthly_levered_cash_flow(inputs)
+    terminal_value = inputs.after_repair_value - inputs.selling_costs - inputs.exit_loan_payoff
     cashflows = (
         [-effective_cash_to_close]
         + [monthly_income for _ in range(max(inputs.holding_months - 1, 0))]
@@ -265,7 +291,7 @@ def calculate_profit(inputs: DealInputs) -> Decimal:
         - inputs.selling_costs
         - inputs.purchase_price
         - inputs.rehab_cost
-        - inputs.holding_costs
+        - calculate_effective_holding_costs(inputs)
         - calculate_total_transaction_costs(inputs)
     )
 
@@ -306,9 +332,17 @@ def calculate_financed_transaction_costs(inputs: DealInputs) -> Decimal:
     return inputs.financed_transaction_costs
 
 
+def calculate_effective_holding_costs(inputs: DealInputs) -> Decimal:
+    return inputs.holding_costs + inputs.total_interest_carry
+
+
+def calculate_monthly_levered_cash_flow(inputs: DealInputs) -> Decimal:
+    return inputs.rent_monthly - inputs.operating_expense_monthly - inputs.monthly_debt_service
+
+
 def calculate_risk_score(inputs: DealInputs, cash_to_close: Decimal | None = None) -> int:
     effective_cash_to_close = cash_to_close if cash_to_close is not None else calculate_cash_to_close(inputs)
-    annual_cash_flow = (inputs.rent_monthly - inputs.operating_expense_monthly) * Decimal("12")
+    annual_cash_flow = calculate_monthly_levered_cash_flow(inputs) * Decimal("12")
     liquidity_gap = max(Decimal("0"), effective_cash_to_close - inputs.cash_available)
     risk_score = Decimal("45")
     risk_score += Decimal("20") if inputs.strategy == "flip" else Decimal("10")
@@ -371,6 +405,18 @@ def _decimal_field(
         return Decimal(str(value))
     except Exception as exc:
         raise PriceEngineError("VALIDATION_FAILED", f"{field_name} must be numeric") from exc
+
+
+def _aliased_decimal_field(
+    payload: dict[str, Any],
+    *,
+    primary_field_name: str,
+    secondary_field_name: str,
+    default: Decimal,
+) -> Decimal:
+    if payload.get(primary_field_name) is not None:
+        return _decimal_field(payload, primary_field_name, required=False, default=default)
+    return _decimal_field(payload, secondary_field_name, required=False, default=default)
 
 
 def _int_field(payload: dict[str, Any], field_name: str, *, default: int, minimum: int) -> int:

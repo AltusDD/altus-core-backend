@@ -55,6 +55,9 @@ This document records the currently executable contract for the price engine cal
 - `endorsements`
 - `transactionDate`
 - `providerContext`
+- `annualInterestRate`
+- `interestRateAnnual`
+- `interestOnly`
 
 ## Supported Strategy Values
 
@@ -82,7 +85,10 @@ Response shape:
   "TotalTransactionCosts": 0.0,
   "TotalPoints": 0.0,
   "CashPaidTransactionCosts": 0.0,
-  "FinancedTransactionCosts": 0.0
+  "FinancedTransactionCosts": 0.0,
+  "MonthlyDebtService": 0.0,
+  "TotalInterestCarry": 0.0,
+  "DebtServiceType": "amortized"
 }
 ```
 
@@ -98,6 +104,9 @@ Notes:
 - `TotalTransactionCosts` aggregates `closingCosts + TotalLenderFees + TotalTitleFees + TotalPoints`.
 - `CashPaidTransactionCosts` includes only non-financed lender fees, title fees, and points.
 - `FinancedTransactionCosts` includes only lender fees, title fees, and points flagged for financing.
+- `MonthlyDebtService` is the normalized monthly financing obligation generated from the effective financed principal.
+- `TotalInterestCarry` is the deterministic interest portion accumulated across the hold period.
+- `DebtServiceType` is `interest-only`, `amortized`, or `none`.
 - When no approved live title-rate provider is configured, the route uses the existing stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
 
 ## Error Contract
