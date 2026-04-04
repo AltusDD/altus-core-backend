@@ -233,13 +233,19 @@ class PriceEngineCalculationsTests(unittest.TestCase):
                 "otherExitCosts": 1000,
                 "providerContext": {
                     "requestedProvider": "liberty",
-                    "libertyQuote": {
+                    "libertySnapshot": {
                         "quoteReference": "LIA-QUOTE-001",
-                        "titlePremium": 1800,
-                        "settlementFee": 850,
-                        "recordingFee": 225,
-                        "ownerPolicy": 450,
-                        "lenderPolicy": 375,
+                        "snapshotVersion": "v1",
+                        "quotedAt": "2026-03-18T15:45:00Z",
+                        "capturedAt": "2026-03-18T15:46:00Z",
+                        "source": "liberty_iframe_snapshot",
+                        "fees": {
+                            "titlePremium": 1800,
+                            "settlementFee": 850,
+                            "recordingFee": 225,
+                            "ownerPolicy": 450,
+                            "lenderPolicy": 375,
+                        },
                     },
                 },
             }

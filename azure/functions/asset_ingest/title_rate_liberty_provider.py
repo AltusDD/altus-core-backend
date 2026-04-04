@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from typing import Any
+from decimal import Decimal, ROUND_HALF_UP
 
+from title_rate_liberty_snapshot import normalize_liberty_quote_snapshot
 from title_rate_provider import (
     TitleRateLineItem,
     TitleRateQuoteRequest,
@@ -16,77 +16,72 @@ class LibertyTitleRateProvider:
     provider_key = "liberty"
 
     def quote(self, request: TitleRateQuoteRequest) -> TitleRateQuoteResult:
-        quote = request.provider_context.get("libertyQuote")
-        if not isinstance(quote, dict):
-            return self._fallback_result(
-                request,
-                "Liberty quote retrieval is unavailable because this build has no documented server-to-server Liberty quote bridge.",
-            )
-
         try:
-            title_premium = _decimal_field(quote, "titlePremium")
-            settlement_fee = _decimal_field(quote, "settlementFee", aliases=("settlementServices",))
-            recording_fee = _decimal_field(quote, "recordingFee", aliases=("recordingFees",))
-            owner_policy = _decimal_field(quote, "ownerPolicy")
-            lender_policy = _decimal_field(quote, "lenderPolicy")
-            endorsements = _decimal_field(quote, "endorsements", required=False, default=_ZERO_MONEY)
-            transfer_taxes = _decimal_field(quote, "transferTaxes", required=False, default=_ZERO_MONEY)
-            other_fees = _decimal_field(quote, "otherFees", required=False, default=_ZERO_MONEY)
+            snapshot = normalize_liberty_quote_snapshot(request.provider_context)
         except ValueError:
             return self._fallback_result(
                 request,
                 "Liberty quote retrieval is unavailable because the supplied quote snapshot is incomplete or invalid.",
             )
 
+        if snapshot is None:
+            return self._fallback_result(
+                request,
+                "Liberty quote retrieval is unavailable because no approved Liberty snapshot was provided to the ingest path.",
+            )
+
         total = (
-            title_premium
-            + settlement_fee
-            + recording_fee
-            + owner_policy
-            + lender_policy
-            + endorsements
-            + transfer_taxes
-            + other_fees
+            snapshot.title_premium
+            + snapshot.settlement_fee
+            + snapshot.recording_fee
+            + snapshot.owner_policy
+            + snapshot.lender_policy
+            + snapshot.endorsements
+            + snapshot.transfer_taxes
+            + snapshot.other_fees
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         return TitleRateQuoteResult(
             provider_key=self.provider_key,
             status="quoted",
-            quote_reference=_optional_string(quote.get("quoteReference")),
+            quote_reference=snapshot.quote_reference,
             totals={
-                "ownerPolicy": owner_policy,
-                "lenderPolicy": lender_policy,
-                "endorsements": endorsements,
-                "settlementServices": settlement_fee,
-                "recordingFees": recording_fee,
-                "transferTaxes": transfer_taxes,
-                "otherFees": other_fees + title_premium,
+                "ownerPolicy": snapshot.owner_policy,
+                "lenderPolicy": snapshot.lender_policy,
+                "endorsements": snapshot.endorsements,
+                "settlementServices": snapshot.settlement_fee,
+                "recordingFees": snapshot.recording_fee,
+                "transferTaxes": snapshot.transfer_taxes,
+                "otherFees": snapshot.other_fees + snapshot.title_premium,
                 "total": total,
             },
             line_items=(
-                _line_item("title-premium", "policy", "Liberty title premium", title_premium),
-                _line_item("owner-policy", "policy", "Liberty owner policy", owner_policy),
-                _line_item("lender-policy", "policy", "Liberty lender policy", lender_policy),
-                _line_item("settlement-fee", "closing", "Liberty settlement fee", settlement_fee),
-                _line_item("recording-fee", "government", "Liberty recording fee", recording_fee),
+                _line_item("title-premium", "policy", "Liberty title premium", snapshot.title_premium),
+                _line_item("owner-policy", "policy", "Liberty owner policy", snapshot.owner_policy),
+                _line_item("lender-policy", "policy", "Liberty lender policy", snapshot.lender_policy),
+                _line_item("settlement-fee", "closing", "Liberty settlement fee", snapshot.settlement_fee),
+                _line_item("recording-fee", "government", "Liberty recording fee", snapshot.recording_fee),
             ),
             assumptions=(
-                "Liberty quote values were supplied through the approved quote snapshot bridge.",
+                "Liberty quote values were supplied through the approved quote snapshot ingest path.",
                 "This build does not place orders and uses quote-only behavior.",
             ),
             warnings=tuple(
                 warning
                 for warning in (
                     "Liberty public iframe currently exposes a tokenized app launch rather than a documented backend quote API.",
-                    _optional_string(quote.get("warning")),
+                    snapshot.warning,
                 )
                 if warning
             ),
-            expires_at=_optional_string(quote.get("expiresAt")),
+            expires_at=snapshot.expires_at,
             provider_context={
-                "mode": "quote_snapshot",
+                "mode": "snapshot_ingest",
                 "requestedProvider": request.provider_context.get("requestedProvider"),
-                "source": "liberty_iframe_snapshot",
+                "source": snapshot.source,
+                "snapshotVersion": snapshot.snapshot_version,
+                "quotedAt": snapshot.quoted_at,
+                "capturedAt": snapshot.captured_at,
                 "automationAvailable": False,
             },
         )
@@ -123,33 +118,6 @@ class LibertyTitleRateProvider:
                 "automationAvailable": False,
             },
         )
-
-
-def _decimal_field(
-    payload: dict[str, Any],
-    field_name: str,
-    *,
-    aliases: tuple[str, ...] = (),
-    required: bool = True,
-    default: Decimal = _ZERO_MONEY,
-) -> Decimal:
-    for candidate in (field_name, *aliases):
-        value = payload.get(candidate)
-        if value is None:
-            continue
-        try:
-            decimal_value = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        except (InvalidOperation, ValueError, TypeError) as exc:
-            raise ValueError(f"{field_name} must be numeric") from exc
-        if decimal_value < _ZERO_MONEY:
-            raise ValueError(f"{field_name} must be non-negative")
-        return decimal_value
-
-    if required:
-        raise ValueError(f"{field_name} is required")
-    return default
-
-
 def _line_item(code: str, category: str, description: str, amount: Decimal) -> TitleRateLineItem:
     return TitleRateLineItem(
         code=code,
@@ -158,11 +126,3 @@ def _line_item(code: str, category: str, description: str, amount: Decimal) -> T
         amount=amount,
     )
 
-
-def _optional_string(value: Any) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        return None
-    cleaned = value.strip()
-    return cleaned or None

@@ -45,7 +45,7 @@
     }
   ],
   "assumptions": [
-    "Liberty quote values were supplied through the approved quote snapshot bridge.",
+    "Liberty quote values were supplied through the approved quote snapshot ingest path.",
     "This build does not place orders and uses quote-only behavior."
   ],
   "warnings": [
@@ -53,9 +53,12 @@
   ],
   "expiresAt": "2026-03-19T00:00:00Z",
   "providerContext": {
-    "mode": "quote_snapshot",
+    "mode": "snapshot_ingest",
     "requestedProvider": "liberty",
     "source": "liberty_iframe_snapshot",
+    "snapshotVersion": "v1",
+    "quotedAt": "2026-03-18T15:45:00Z",
+    "capturedAt": "2026-03-18T15:46:00Z",
     "automationAvailable": false
   }
 }

@@ -11,7 +11,7 @@ This document records the normalized provider adapter contract for title-rate qu
 - This contract is additive and does not change `/api/price-engine/calculate`.
 - This contract does not implement third-party scraping, browser automation, or headless browsing.
 - The public Liberty iframe currently exposes a tokenized app launch rather than a documented server-to-server quote API.
-- This contract allows provider selection through configuration and supports a deterministic Liberty quote snapshot bridge plus the stub provider.
+- This contract allows provider selection through configuration and supports a deterministic Liberty quote snapshot ingest path plus the stub provider.
 
 ## Provider Selection
 
@@ -47,14 +47,20 @@ Request body:
   "transactionDate": "2026-03-14",
   "providerContext": {
     "requestedProvider": "liberty",
-    "libertyQuote": {
+    "libertySnapshot": {
       "quoteReference": "LIA-QUOTE-001",
-      "titlePremium": 1800.0,
-      "settlementFee": 850.0,
-      "recordingFee": 225.0,
-      "ownerPolicy": 450.0,
-      "lenderPolicy": 375.0,
-      "expiresAt": "2026-03-19T00:00:00Z"
+      "snapshotVersion": "v1",
+      "quotedAt": "2026-03-18T15:45:00Z",
+      "capturedAt": "2026-03-18T15:46:00Z",
+      "source": "liberty_iframe_snapshot",
+      "expiresAt": "2026-03-19T00:00:00Z",
+      "fees": {
+        "titlePremium": 1800.0,
+        "settlementFee": 850.0,
+        "recordingFee": 225.0,
+        "ownerPolicy": 450.0,
+        "lenderPolicy": 375.0
+      }
     }
   }
 }
@@ -74,12 +80,19 @@ Request body:
 - `endorsements` optional array of strings
 - `transactionDate` optional string
 - `providerContext` optional object for provider-specific metadata
-- `providerContext.libertyQuote` optional approved quote snapshot bridge when `PRICE_ENGINE_TITLE_RATE_PROVIDER=liberty`
-- `providerContext.libertyQuote.titlePremium` maps to canonical `titlePremium`
-- `providerContext.libertyQuote.settlementFee` maps to canonical `settlementFee`
-- `providerContext.libertyQuote.recordingFee` maps to canonical `recordingFee`
-- `providerContext.libertyQuote.ownerPolicy` maps to canonical `ownerPolicy`
-- `providerContext.libertyQuote.lenderPolicy` maps to canonical `lenderPolicy`
+- `providerContext.libertySnapshot` optional approved quote snapshot ingest object when `PRICE_ENGINE_TITLE_RATE_PROVIDER=liberty`
+- `providerContext.libertySnapshot.quoteReference` required for traceability
+- `providerContext.libertySnapshot.snapshotVersion` optional string, defaults to `v1`
+- `providerContext.libertySnapshot.quotedAt` optional string
+- `providerContext.libertySnapshot.capturedAt` optional string
+- `providerContext.libertySnapshot.source` optional string, defaults to `liberty_iframe_snapshot`
+- `providerContext.libertySnapshot.expiresAt` optional string
+- `providerContext.libertySnapshot.fees.titlePremium` maps to canonical `titlePremium`
+- `providerContext.libertySnapshot.fees.settlementFee` or `settlementServices` maps to canonical `settlementFee`
+- `providerContext.libertySnapshot.fees.recordingFee` or `recordingFees` maps to canonical `recordingFee`
+- `providerContext.libertySnapshot.fees.ownerPolicy` maps to canonical `ownerPolicy`
+- `providerContext.libertySnapshot.fees.lenderPolicy` maps to canonical `lenderPolicy`
+- Legacy `providerContext.libertyQuote` remains accepted as a backward-compatible alias and is normalized to snapshot version `legacy-v0`
 
 ## Normalized Success Response Shape
 
@@ -107,16 +120,19 @@ Request body:
     }
   ],
   "assumptions": [
-    "Liberty quote values were supplied through the approved quote snapshot bridge."
+    "Liberty quote values were supplied through the approved quote snapshot ingest path."
   ],
   "warnings": [
     "Liberty public iframe currently exposes a tokenized app launch rather than a documented backend quote API."
   ],
   "expiresAt": "2026-03-19T00:00:00Z",
   "providerContext": {
-    "mode": "quote_snapshot",
+    "mode": "snapshot_ingest",
     "requestedProvider": "liberty",
     "source": "liberty_iframe_snapshot",
+    "snapshotVersion": "v1",
+    "quotedAt": "2026-03-18T15:45:00Z",
+    "capturedAt": "2026-03-18T15:46:00Z",
     "automationAvailable": false
   }
 }
@@ -171,6 +187,8 @@ The proof-bearing fixtures for this route live under:
 
 - `docs/contracts/fixtures/title_rate_quote/stub_request.json`
 - `docs/contracts/fixtures/title_rate_quote/stub_response.json`
+- `docs/contracts/fixtures/title_rate_quote/liberty_request.json`
+- `docs/contracts/fixtures/title_rate_quote/liberty_response.json`
 - `docs/contracts/fixtures/title_rate_quote/error_no_provider_request.json`
 - `docs/contracts/fixtures/title_rate_quote/error_no_provider_response.json`
 
@@ -178,5 +196,5 @@ The proof-bearing fixtures for this route live under:
 
 - If the normalized request or response contract changes, fixtures and tests must change in the same PR.
 - Vendor-specific fields must remain isolated inside `providerContext` unless promoted intentionally in a future additive revision.
-- Liberty quote retrieval currently depends on an approved quote snapshot bridge because the public iframe does not expose a documented backend quote API in this build.
+- Liberty quote retrieval currently depends on an approved quote snapshot ingest path because the public iframe does not expose a documented backend quote API in this build.
 - A non-snapshot Liberty automation path must not be added without explicit approval and updated proof fixtures.

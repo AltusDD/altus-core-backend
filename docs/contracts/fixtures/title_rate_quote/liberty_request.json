@@ -8,14 +8,20 @@
   "loanAmount": 300000,
   "providerContext": {
     "requestedProvider": "liberty",
-    "libertyQuote": {
+    "libertySnapshot": {
       "quoteReference": "LIA-QUOTE-001",
-      "titlePremium": 1800.0,
-      "settlementFee": 850.0,
-      "recordingFee": 225.0,
-      "ownerPolicy": 450.0,
-      "lenderPolicy": 375.0,
-      "expiresAt": "2026-03-19T00:00:00Z"
+      "snapshotVersion": "v1",
+      "quotedAt": "2026-03-18T15:45:00Z",
+      "capturedAt": "2026-03-18T15:46:00Z",
+      "source": "liberty_iframe_snapshot",
+      "expiresAt": "2026-03-19T00:00:00Z",
+      "fees": {
+        "titlePremium": 1800.0,
+        "settlementFee": 850.0,
+        "recordingFee": 225.0,
+        "ownerPolicy": 450.0,
+        "lenderPolicy": 375.0
+      }
     }
   }
 }

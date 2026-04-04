@@ -101,14 +101,20 @@ class TitleRateProviderTests(unittest.TestCase):
                 "loanAmount": 300000,
                 "providerContext": {
                     "requestedProvider": "liberty",
-                    "libertyQuote": {
+                    "libertySnapshot": {
                         "quoteReference": "LIA-QUOTE-001",
-                        "titlePremium": 1800,
-                        "settlementFee": 850,
-                        "recordingFee": 225,
-                        "ownerPolicy": 450,
-                        "lenderPolicy": 375,
+                        "snapshotVersion": "v1",
+                        "quotedAt": "2026-03-18T15:45:00Z",
+                        "capturedAt": "2026-03-18T15:46:00Z",
+                        "source": "liberty_iframe_snapshot",
                         "expiresAt": "2026-03-19T00:00:00Z",
+                        "fees": {
+                            "titlePremium": 1800,
+                            "settlementFee": 850,
+                            "recordingFee": 225,
+                            "ownerPolicy": 450,
+                            "lenderPolicy": 375,
+                        },
                     },
                 },
             }
@@ -122,7 +128,36 @@ class TitleRateProviderTests(unittest.TestCase):
         self.assertEqual(response["totals"]["settlementServices"], 850.0)
         self.assertEqual(response["totals"]["recordingFees"], 225.0)
         self.assertEqual(response["totals"]["total"], 3700.0)
-        self.assertEqual(response["providerContext"]["mode"], "quote_snapshot")
+        self.assertEqual(response["providerContext"]["mode"], "snapshot_ingest")
+        self.assertEqual(response["providerContext"]["snapshotVersion"], "v1")
+
+    def test_liberty_provider_accepts_legacy_quote_shape_for_backward_compatibility(self) -> None:
+        os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
+
+        response = quote_title_rate(
+            {
+                "transactionType": "purchase",
+                "propertyState": "MO",
+                "salesPrice": 425000,
+                "loanAmount": 300000,
+                "providerContext": {
+                    "requestedProvider": "liberty",
+                    "libertyQuote": {
+                        "quoteReference": "LIA-LEGACY-001",
+                        "titlePremium": 1800,
+                        "settlementServices": 850,
+                        "recordingFees": 225,
+                        "ownerPolicy": 450,
+                        "lenderPolicy": 375,
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(response["providerKey"], "liberty")
+        self.assertEqual(response["status"], "quoted")
+        self.assertEqual(response["quoteReference"], "LIA-LEGACY-001")
+        self.assertEqual(response["providerContext"]["snapshotVersion"], "legacy-v0")
 
     def test_liberty_provider_falls_back_to_stub_totals_when_snapshot_is_unavailable(self) -> None:
         os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
@@ -141,6 +176,36 @@ class TitleRateProviderTests(unittest.TestCase):
         self.assertEqual(response["status"], "fallback_stub")
         self.assertEqual(response["totals"]["total"], 0.0)
         self.assertEqual(response["providerContext"]["mode"], "fallback_stub")
+        self.assertTrue(response["warnings"])
+
+    def test_liberty_provider_falls_back_when_snapshot_shape_is_invalid(self) -> None:
+        os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
+
+        response = quote_title_rate(
+            {
+                "transactionType": "purchase",
+                "propertyState": "MO",
+                "salesPrice": 425000,
+                "loanAmount": 300000,
+                "providerContext": {
+                    "requestedProvider": "liberty",
+                    "libertySnapshot": {
+                        "quoteReference": "LIA-BAD-001",
+                        "fees": {
+                            "titlePremium": -1,
+                            "settlementFee": 850,
+                            "recordingFee": 225,
+                            "ownerPolicy": 450,
+                            "lenderPolicy": 375,
+                        },
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(response["providerKey"], "liberty")
+        self.assertEqual(response["status"], "fallback_stub")
+        self.assertEqual(response["totals"]["total"], 0.0)
         self.assertTrue(response["warnings"])
 
     def test_no_provider_configured_behavior_is_explicit(self) -> None:

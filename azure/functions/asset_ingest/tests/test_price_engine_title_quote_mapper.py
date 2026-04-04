@@ -59,12 +59,16 @@ class PriceEngineTitleQuoteMapperTests(unittest.TestCase):
                 "providerContext": json.dumps(
                     {
                         "requestedProvider": "liberty",
-                        "libertyQuote": {
-                            "titlePremium": 1800,
-                            "settlementFee": 850,
-                            "recordingFee": 225,
-                            "ownerPolicy": 450,
-                            "lenderPolicy": 375,
+                        "libertySnapshot": {
+                            "quoteReference": "LIA-QUOTE-001",
+                            "snapshotVersion": "v1",
+                            "fees": {
+                                "titlePremium": 1800,
+                                "settlementFee": 850,
+                                "recordingFee": 225,
+                                "ownerPolicy": 450,
+                                "lenderPolicy": 375,
+                            },
                         },
                     }
                 ),
@@ -73,7 +77,7 @@ class PriceEngineTitleQuoteMapperTests(unittest.TestCase):
         )
 
         self.assertEqual(payload["providerContext"]["requestedProvider"], "liberty")
-        self.assertEqual(payload["providerContext"]["libertyQuote"]["titlePremium"], 1800)
+        self.assertEqual(payload["providerContext"]["libertySnapshot"]["fees"]["titlePremium"], 1800)
 
 
 if __name__ == "__main__":
