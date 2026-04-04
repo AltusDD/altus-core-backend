@@ -1,11 +1,11 @@
 {
-  "MAO": 123475.0,
-  "IRR": 93.92,
-  "CoC": 28.02,
-  "CashToClose": 68525.0,
-  "Profit": 29875.0,
-  "RiskScore": 66,
+  "MAO": 127175.0,
+  "IRR": 106.31,
+  "CoC": 29.62,
+  "CashToClose": 64825.0,
+  "Profit": 33575.0,
+  "RiskScore": 65,
   "TotalLenderFees": 3825.0,
-  "TotalTitleFees": 3700.0,
-  "TotalTransactionCosts": 14525.0
+  "TotalTitleFees": 0.0,
+  "TotalTransactionCosts": 10825.0
 }

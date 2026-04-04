@@ -13,10 +13,11 @@
   "processingFee": 695,
   "appraisalFee": 550,
   "creditReportFee": 85,
-  "titlePremium": 1800,
-  "settlementFee": 850,
-  "recordingFee": 225,
-  "ownerPolicy": 450,
-  "lenderPolicy": 375,
+  "propertyState": "MO",
+  "county": "Jackson",
+  "city": "Kansas City",
+  "postalCode": "64108",
+  "endorsements": ["CPL", "T-19"],
+  "transactionDate": "2026-03-18",
   "targetProfitMargin": 0.12
 }

@@ -33,11 +33,6 @@ This document records the currently executable contract for the price engine cal
 - `processingFee`
 - `appraisalFee`
 - `creditReportFee`
-- `titlePremium`
-- `settlementFee`
-- `recordingFee`
-- `ownerPolicy`
-- `lenderPolicy`
 - `reserves`
 - `points`
 - `pointsRate`
@@ -47,6 +42,16 @@ This document records the currently executable contract for the price engine cal
 - `interestRateAnnual`
 - `amortizationMonths`
 - `targetProfitMargin`
+- `transactionType`
+- `propertyState`
+- `county`
+- `city`
+- `postalCode`
+- `ownerPolicyAmount`
+- `lenderPolicyAmount`
+- `endorsements`
+- `transactionDate`
+- `providerContext`
 
 ## Supported Strategy Values
 
@@ -82,8 +87,9 @@ Notes:
 - `IRR` is annualized from monthly hold-period cash flows.
 - `CoC` uses annual net operating cash flow divided by upfront cash to close.
 - `TotalLenderFees` aggregates loan origination, underwriting, processing, appraisal, and credit report fees.
-- `TotalTitleFees` aggregates title premium, settlement, recording, owner policy, and lender policy fees.
+- `TotalTitleFees` is sourced from the normalized title-rate quote mapping layer rather than caller-supplied title fee inputs.
 - `TotalTransactionCosts` aggregates `closingCosts + TotalLenderFees + TotalTitleFees`.
+- When no approved live title-rate provider is configured, the route uses the existing stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
 
 ## Error Contract
 
