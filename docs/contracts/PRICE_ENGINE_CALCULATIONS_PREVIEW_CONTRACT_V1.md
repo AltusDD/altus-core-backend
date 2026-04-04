@@ -36,6 +36,9 @@ This document records the additive calculation-preview surface for the Price Eng
 - `reserves`
 - `points`
 - `pointsRate`
+- `financeLenderFees`
+- `financeTitleFees`
+- `financePoints`
 - `loanAmount`
 - `financedLtv`
 - `holdingMonths`
@@ -70,14 +73,20 @@ Response shape:
   "RiskScore": 0,
   "TotalLenderFees": 0.0,
   "TotalTitleFees": 0.0,
-  "TotalTransactionCosts": 0.0
+  "TotalTransactionCosts": 0.0,
+  "TotalPoints": 0.0,
+  "CashPaidTransactionCosts": 0.0,
+  "FinancedTransactionCosts": 0.0
 }
 ```
 
 Notes:
 - `TotalLenderFees` aggregates loan origination, underwriting, processing, appraisal, and credit report fees.
 - `TotalTitleFees` is sourced from the normalized title-rate quote mapping layer rather than caller-supplied title fee inputs.
-- `TotalTransactionCosts` aggregates `closingCosts + TotalLenderFees + TotalTitleFees`.
+- `TotalPoints` is calculated as `loanAmount * pointsRate` when `pointsRate` is provided; otherwise it falls back to the flat `points` input.
+- `TotalTransactionCosts` aggregates `closingCosts + TotalLenderFees + TotalTitleFees + TotalPoints`.
+- `CashPaidTransactionCosts` includes only non-financed lender fees, title fees, and points.
+- `FinancedTransactionCosts` includes only lender fees, title fees, and points flagged for financing.
 - When no approved live title-rate provider is configured, the route uses the existing stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
 
 ## Error Contract

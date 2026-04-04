@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from price_engine_errors import PriceEngineError
+from price_engine_financing_treatment import build_financing_treatment
+
 _ALLOWED_STRATEGIES = {"flip", "rental_hold", "brrrr"}
 _DEFAULT_LTV = {
     "flip": Decimal("0.80"),
@@ -11,14 +14,6 @@ _DEFAULT_LTV = {
     "brrrr": Decimal("0.70"),
 }
 _DEFAULT_SELLING_COST_RATE = Decimal("0.08")
-
-
-class PriceEngineError(Exception):
-    def __init__(self, code: str, message: str, details: dict[str, Any] | None = None) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.details = details or {}
 
 
 @dataclass(frozen=True)
@@ -45,6 +40,16 @@ class DealInputs:
     lender_policy: Decimal
     reserves: Decimal
     points: Decimal
+    total_points: Decimal
+    cash_paid_points: Decimal
+    financed_points: Decimal
+    cash_paid_lender_fees: Decimal
+    financed_lender_fees: Decimal
+    cash_paid_title_fees: Decimal
+    financed_title_fees: Decimal
+    cash_paid_transaction_costs: Decimal
+    financed_transaction_costs: Decimal
+    effective_loan_payoff: Decimal
     loan_amount: Decimal
     financed_ltv: Decimal
     holding_months: int
@@ -85,6 +90,9 @@ def calculate_price_engine_from_inputs(inputs: DealInputs) -> dict[str, Any]:
         "TotalLenderFees": _round_currency(total_lender_fees),
         "TotalTitleFees": _round_currency(total_title_fees),
         "TotalTransactionCosts": _round_currency(total_transaction_costs),
+        "TotalPoints": _round_currency(inputs.total_points),
+        "CashPaidTransactionCosts": _round_currency(calculate_cash_paid_transaction_costs(inputs)),
+        "FinancedTransactionCosts": _round_currency(calculate_financed_transaction_costs(inputs)),
     }
 
 
@@ -122,13 +130,30 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
     implied_loan_amount = purchase_price * financed_ltv
     loan_amount = _decimal_field(payload, "loanAmount", required=False, default=implied_loan_amount)
     points = _decimal_field(payload, "points", required=False, default=Decimal("0"))
-    points_rate = _decimal_field(payload, "pointsRate", required=False, default=Decimal("0"))
-    if points == Decimal("0") and points_rate > Decimal("0"):
-        points = loan_amount * points_rate
-
     interest_rate_annual = _decimal_field(payload, "interestRateAnnual", required=False, default=Decimal("0.08"))
     amortization_months = _int_field(payload, "amortizationMonths", default=360, minimum=1)
     target_profit_margin = _decimal_field(payload, "targetProfitMargin", required=False, default=Decimal("0.10"))
+    total_lender_fees = (
+        loan_origination_fee
+        + underwriting_fee
+        + processing_fee
+        + appraisal_fee
+        + credit_report_fee
+    )
+    total_title_fees = (
+        title_premium
+        + settlement_fee
+        + recording_fee
+        + owner_policy
+        + lender_policy
+    )
+    financing_treatment = build_financing_treatment(
+        payload,
+        loan_amount=loan_amount,
+        total_lender_fees=total_lender_fees,
+        total_title_fees=total_title_fees,
+        explicit_points=points,
+    )
 
     numeric_fields = (
         purchase_price,
@@ -152,6 +177,7 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
         lender_policy,
         reserves,
         points,
+        financing_treatment.total_points,
         loan_amount,
         interest_rate_annual,
         target_profit_margin,
@@ -185,6 +211,16 @@ def build_deal_inputs(payload: dict[str, Any]) -> DealInputs:
         lender_policy=lender_policy,
         reserves=reserves,
         points=points,
+        total_points=financing_treatment.total_points,
+        cash_paid_points=financing_treatment.cash_paid_points,
+        financed_points=financing_treatment.financed_points,
+        cash_paid_lender_fees=financing_treatment.cash_paid_lender_fees,
+        financed_lender_fees=financing_treatment.financed_lender_fees,
+        cash_paid_title_fees=financing_treatment.cash_paid_title_fees,
+        financed_title_fees=financing_treatment.financed_title_fees,
+        cash_paid_transaction_costs=financing_treatment.cash_paid_transaction_costs,
+        financed_transaction_costs=financing_treatment.financed_transaction_costs,
+        effective_loan_payoff=financing_treatment.effective_loan_payoff,
         loan_amount=loan_amount,
         financed_ltv=financed_ltv,
         holding_months=holding_months,
@@ -202,7 +238,7 @@ def calculate_mao(inputs: DealInputs) -> Decimal:
 
 def calculate_cash_to_close(inputs: DealInputs) -> Decimal:
     down_payment = max(inputs.purchase_price - inputs.loan_amount, Decimal("0"))
-    return down_payment + inputs.rehab_cost + calculate_total_transaction_costs(inputs) + inputs.reserves + inputs.points
+    return down_payment + inputs.rehab_cost + inputs.closing_costs + calculate_cash_paid_transaction_costs(inputs) + inputs.reserves
 
 
 def calculate_cash_on_cash(inputs: DealInputs, cash_to_close: Decimal | None = None) -> Decimal:
@@ -214,7 +250,7 @@ def calculate_cash_on_cash(inputs: DealInputs, cash_to_close: Decimal | None = N
 def calculate_irr(inputs: DealInputs, cash_to_close: Decimal | None = None) -> Decimal:
     effective_cash_to_close = cash_to_close if cash_to_close is not None else calculate_cash_to_close(inputs)
     monthly_income = inputs.rent_monthly - inputs.operating_expense_monthly
-    terminal_value = inputs.after_repair_value - inputs.selling_costs - inputs.loan_amount
+    terminal_value = inputs.after_repair_value - inputs.selling_costs - inputs.effective_loan_payoff
     cashflows = (
         [-effective_cash_to_close]
         + [monthly_income for _ in range(max(inputs.holding_months - 1, 0))]
@@ -255,7 +291,19 @@ def calculate_total_title_fees(inputs: DealInputs) -> Decimal:
 
 
 def calculate_total_transaction_costs(inputs: DealInputs) -> Decimal:
-    return inputs.closing_costs + calculate_total_lender_fees(inputs) + calculate_total_title_fees(inputs)
+    return inputs.closing_costs + calculate_total_lender_fees(inputs) + calculate_total_title_fees(inputs) + calculate_total_points(inputs)
+
+
+def calculate_total_points(inputs: DealInputs) -> Decimal:
+    return inputs.total_points
+
+
+def calculate_cash_paid_transaction_costs(inputs: DealInputs) -> Decimal:
+    return inputs.cash_paid_lender_fees + inputs.cash_paid_title_fees + inputs.cash_paid_points
+
+
+def calculate_financed_transaction_costs(inputs: DealInputs) -> Decimal:
+    return inputs.financed_transaction_costs
 
 
 def calculate_risk_score(inputs: DealInputs, cash_to_close: Decimal | None = None) -> int:
