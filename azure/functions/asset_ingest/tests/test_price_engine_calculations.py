@@ -146,6 +146,50 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertEqual(metrics["TotalExitCosts"], 23000.0)
         self.assertEqual(metrics["ExitLoanPayoff"], 100895.06)
         self.assertEqual(metrics["NetDispositionProceeds"], 101104.94)
+        self.assertEqual(metrics["ScenarioProfile"], "flip")
+        self.assertEqual(metrics["AppliedPresetFields"], [])
+        self.assertEqual(metrics["ValidationWarnings"], [])
+
+    def test_service_applies_missing_preset_fields_without_overriding_explicit_values(self) -> None:
+        os.environ.pop("PRICE_ENGINE_TITLE_RATE_PROVIDER", None)
+
+        metrics = calculate_price_engine(
+            {
+                "strategy": "brrrr",
+                "purchasePrice": 120000,
+                "afterRepairValue": 220000,
+                "rehabCost": 30000,
+                "holdingCosts": 8000,
+                "closingCosts": 7000,
+                "cashAvailable": 60000,
+                "rentMonthly": 2500,
+                "operatingExpenseMonthly": 900,
+                "loanOriginationFee": 1500,
+                "underwritingFee": 995,
+                "processingFee": 695,
+                "appraisalFee": 550,
+                "creditReportFee": 85,
+                "pointsRate": 0.02,
+                "financeLenderFees": True,
+                "financeTitleFees": True,
+                "financePoints": True,
+                "propertyState": "MO",
+                "county": "Jackson",
+                "city": "Kansas City",
+                "postalCode": "64108",
+                "endorsements": ["CPL", "T-19"],
+                "transactionDate": "2026-03-18",
+                "annualInterestRate": 0.09,
+            }
+        )
+
+        self.assertEqual(metrics["ScenarioProfile"], "brrrr")
+        self.assertIn("holdingMonths", metrics["AppliedPresetFields"])
+        self.assertIn("interestOnly", metrics["AppliedPresetFields"])
+        self.assertIn("amortizationMonths", metrics["AppliedPresetFields"])
+        self.assertIn("saleCommissionRate", metrics["AppliedPresetFields"])
+        self.assertNotIn("annualInterestRate", metrics["AppliedPresetFields"])
+        self.assertEqual(metrics["ValidationWarnings"], [])
 
 
 if __name__ == "__main__":
