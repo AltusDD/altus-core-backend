@@ -1,0 +1,21 @@
+{
+  "transactionType": "purchase",
+  "propertyState": "MO",
+  "county": "Jackson",
+  "city": "Kansas City",
+  "postalCode": "64108",
+  "salesPrice": 425000,
+  "loanAmount": 300000,
+  "providerContext": {
+    "requestedProvider": "liberty",
+    "libertyQuote": {
+      "quoteReference": "LIA-QUOTE-001",
+      "titlePremium": 1800.0,
+      "settlementFee": 850.0,
+      "recordingFee": 225.0,
+      "ownerPolicy": 450.0,
+      "lenderPolicy": 375.0,
+      "expiresAt": "2026-03-19T00:00:00Z"
+    }
+  }
+}

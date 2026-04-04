@@ -191,6 +191,67 @@ class PriceEngineCalculationsTests(unittest.TestCase):
         self.assertNotIn("annualInterestRate", metrics["AppliedPresetFields"])
         self.assertEqual(metrics["ValidationWarnings"], [])
 
+    def test_service_uses_liberty_quote_when_selected(self) -> None:
+        os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
+
+        metrics = calculate_price_engine(
+            {
+                "strategy": "flip",
+                "purchasePrice": 120000,
+                "afterRepairValue": 220000,
+                "rehabCost": 30000,
+                "holdingCosts": 8000,
+                "closingCosts": 7000,
+                "cashAvailable": 60000,
+                "rentMonthly": 2500,
+                "operatingExpenseMonthly": 900,
+                "targetProfitMargin": 0.12,
+                "loanOriginationFee": 1500,
+                "underwritingFee": 995,
+                "processingFee": 695,
+                "appraisalFee": 550,
+                "creditReportFee": 85,
+                "pointsRate": 0.02,
+                "financeLenderFees": True,
+                "financeTitleFees": True,
+                "financePoints": True,
+                "propertyState": "MO",
+                "county": "Jackson",
+                "city": "Kansas City",
+                "postalCode": "64108",
+                "endorsements": ["CPL", "T-19"],
+                "transactionDate": "2026-03-18",
+                "annualInterestRate": 0.08,
+                "holdingMonths": 12,
+                "interestOnly": False,
+                "amortizationMonths": 360,
+                "exitSalePrice": 225000,
+                "saleCommissionRate": 0.06,
+                "sellerClosingCostRate": 0.02,
+                "dispositionFee": 1500,
+                "sellerConcessions": 2500,
+                "otherExitCosts": 1000,
+                "providerContext": {
+                    "requestedProvider": "liberty",
+                    "libertyQuote": {
+                        "quoteReference": "LIA-QUOTE-001",
+                        "titlePremium": 1800,
+                        "settlementFee": 850,
+                        "recordingFee": 225,
+                        "ownerPolicy": 450,
+                        "lenderPolicy": 375,
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(metrics["TotalTitleFees"], 3700.0)
+        self.assertEqual(metrics["TotalTransactionCosts"], 16445.0)
+        self.assertEqual(metrics["CashPaidTransactionCosts"], 0.0)
+        self.assertEqual(metrics["FinancedTransactionCosts"], 9445.0)
+        self.assertEqual(metrics["ScenarioProfile"], "flip")
+        self.assertEqual(metrics["AppliedPresetFields"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

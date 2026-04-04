@@ -107,6 +107,10 @@ def resolve_title_rate_provider() -> TitleRateProvider:
 
     if provider_key == "stub":
         return StubTitleRateProvider()
+    if provider_key == "liberty":
+        from title_rate_liberty_provider import LibertyTitleRateProvider
+
+        return LibertyTitleRateProvider()
 
     raise TitleRateProviderError(
         "UNSUPPORTED_TITLE_RATE_PROVIDER",

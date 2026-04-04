@@ -1,0 +1,61 @@
+{
+  "providerKey": "liberty",
+  "status": "quoted",
+  "quoteReference": "LIA-QUOTE-001",
+  "totals": {
+    "ownerPolicy": 450.0,
+    "lenderPolicy": 375.0,
+    "endorsements": 0.0,
+    "settlementServices": 850.0,
+    "recordingFees": 225.0,
+    "transferTaxes": 0.0,
+    "otherFees": 1800.0,
+    "total": 3700.0
+  },
+  "lineItems": [
+    {
+      "code": "title-premium",
+      "category": "policy",
+      "description": "Liberty title premium",
+      "amount": 1800.0
+    },
+    {
+      "code": "owner-policy",
+      "category": "policy",
+      "description": "Liberty owner policy",
+      "amount": 450.0
+    },
+    {
+      "code": "lender-policy",
+      "category": "policy",
+      "description": "Liberty lender policy",
+      "amount": 375.0
+    },
+    {
+      "code": "settlement-fee",
+      "category": "closing",
+      "description": "Liberty settlement fee",
+      "amount": 850.0
+    },
+    {
+      "code": "recording-fee",
+      "category": "government",
+      "description": "Liberty recording fee",
+      "amount": 225.0
+    }
+  ],
+  "assumptions": [
+    "Liberty quote values were supplied through the approved quote snapshot bridge.",
+    "This build does not place orders and uses quote-only behavior."
+  ],
+  "warnings": [
+    "Liberty public iframe currently exposes a tokenized app launch rather than a documented backend quote API."
+  ],
+  "expiresAt": "2026-03-19T00:00:00Z",
+  "providerContext": {
+    "mode": "quote_snapshot",
+    "requestedProvider": "liberty",
+    "source": "liberty_iframe_snapshot",
+    "automationAvailable": false
+  }
+}

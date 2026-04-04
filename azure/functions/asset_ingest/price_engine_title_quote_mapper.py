@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from typing import Any
 
@@ -121,4 +122,11 @@ def _endorsements(value: Any) -> list[str]:
 def _provider_context(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        if isinstance(parsed, dict):
+            return parsed
     return {}

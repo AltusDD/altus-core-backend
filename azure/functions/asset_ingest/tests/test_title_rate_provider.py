@@ -87,6 +87,62 @@ class TitleRateProviderTests(unittest.TestCase):
         )
         self.assertTrue(response["warnings"])
 
+    def test_liberty_provider_returns_normalized_quote_from_snapshot_bridge(self) -> None:
+        os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
+
+        response = quote_title_rate(
+            {
+                "transactionType": "purchase",
+                "propertyState": "MO",
+                "county": "Jackson",
+                "city": "Kansas City",
+                "postalCode": "64108",
+                "salesPrice": 425000,
+                "loanAmount": 300000,
+                "providerContext": {
+                    "requestedProvider": "liberty",
+                    "libertyQuote": {
+                        "quoteReference": "LIA-QUOTE-001",
+                        "titlePremium": 1800,
+                        "settlementFee": 850,
+                        "recordingFee": 225,
+                        "ownerPolicy": 450,
+                        "lenderPolicy": 375,
+                        "expiresAt": "2026-03-19T00:00:00Z",
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(response["providerKey"], "liberty")
+        self.assertEqual(response["status"], "quoted")
+        self.assertEqual(response["quoteReference"], "LIA-QUOTE-001")
+        self.assertEqual(response["totals"]["ownerPolicy"], 450.0)
+        self.assertEqual(response["totals"]["lenderPolicy"], 375.0)
+        self.assertEqual(response["totals"]["settlementServices"], 850.0)
+        self.assertEqual(response["totals"]["recordingFees"], 225.0)
+        self.assertEqual(response["totals"]["total"], 3700.0)
+        self.assertEqual(response["providerContext"]["mode"], "quote_snapshot")
+
+    def test_liberty_provider_falls_back_to_stub_totals_when_snapshot_is_unavailable(self) -> None:
+        os.environ["PRICE_ENGINE_TITLE_RATE_PROVIDER"] = "liberty"
+
+        response = quote_title_rate(
+            {
+                "transactionType": "purchase",
+                "propertyState": "MO",
+                "salesPrice": 425000,
+                "loanAmount": 300000,
+                "providerContext": {"requestedProvider": "liberty"},
+            }
+        )
+
+        self.assertEqual(response["providerKey"], "liberty")
+        self.assertEqual(response["status"], "fallback_stub")
+        self.assertEqual(response["totals"]["total"], 0.0)
+        self.assertEqual(response["providerContext"]["mode"], "fallback_stub")
+        self.assertTrue(response["warnings"])
+
     def test_no_provider_configured_behavior_is_explicit(self) -> None:
         os.environ.pop("PRICE_ENGINE_TITLE_RATE_PROVIDER", None)
 

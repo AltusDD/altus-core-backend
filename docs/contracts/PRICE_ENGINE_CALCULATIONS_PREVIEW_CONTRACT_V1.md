@@ -130,6 +130,7 @@ Response shape:
 Notes:
 - `TotalLenderFees` aggregates loan origination, underwriting, processing, appraisal, and credit report fees.
 - `TotalTitleFees` is sourced from the normalized title-rate quote mapping layer rather than caller-supplied title fee inputs.
+- When `PRICE_ENGINE_TITLE_RATE_PROVIDER=liberty` and an approved `providerContext.libertyQuote` snapshot is present, title fees are sourced from the Liberty quote bridge instead of the zero-fee stub path.
 - `TotalPoints` is calculated as `loanAmount * pointsRate` when `pointsRate` is provided; otherwise it falls back to the flat `points` input.
 - `TotalTransactionCosts` aggregates `closingCosts + TotalLenderFees + TotalTitleFees + TotalPoints`.
 - `CashPaidTransactionCosts` includes only non-financed lender fees, title fees, and points.
@@ -144,7 +145,7 @@ Notes:
 - `ScenarioProfile` echoes the canonical preset profile used for normalization.
 - `AppliedPresetFields` lists preset-backed fields that were filled because the caller omitted them.
 - `ValidationWarnings` is reserved for non-fatal normalization notices and is empty in this slice.
-- When no approved live title-rate provider is configured, the route uses the existing stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
+- When no approved live title-rate provider is configured, or when Liberty quote retrieval is unavailable, the route uses the deterministic stub quote path and therefore returns zero title-fee totals instead of synthetic manual title fees.
 
 ## Error Contract
 

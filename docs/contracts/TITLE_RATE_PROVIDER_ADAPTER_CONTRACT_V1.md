@@ -4,19 +4,21 @@ Status: Additive provider seam baseline
 Route: `POST /api/price-engine/title-rate-quote`
 Runtime owner: `azure/functions/asset_ingest/title_rate_handler.py`
 
-This document records the normalized provider adapter contract for title-rate quoting in Price Engine. It introduces a vendor-neutral request and response seam while keeping vendor implementations stubbed until an approved API or documented embed bridge exists.
+This document records the normalized provider adapter contract for title-rate quoting in Price Engine. It introduces a vendor-neutral request and response seam while keeping unsafe vendor automation out of the backend.
 
 ## Scope Boundary
 
 - This contract is additive and does not change `/api/price-engine/calculate`.
 - This contract does not implement third-party scraping, browser automation, or headless browsing.
-- This contract allows provider selection through configuration and currently supports only a stub provider.
+- The public Liberty iframe currently exposes a tokenized app launch rather than a documented server-to-server quote API.
+- This contract allows provider selection through configuration and supports a deterministic Liberty quote snapshot bridge plus the stub provider.
 
 ## Provider Selection
 
 - Environment variable: `PRICE_ENGINE_TITLE_RATE_PROVIDER`
 - Supported values in this slice:
   - `stub`
+  - `liberty`
 - Explicit unsupported behaviors:
   - missing env var -> `TITLE_RATE_PROVIDER_NOT_CONFIGURED`
   - unknown provider key -> `UNSUPPORTED_TITLE_RATE_PROVIDER`
@@ -44,7 +46,16 @@ Request body:
   "endorsements": ["CPL", "T-19"],
   "transactionDate": "2026-03-14",
   "providerContext": {
-    "requestedProvider": "approved-provider-key"
+    "requestedProvider": "liberty",
+    "libertyQuote": {
+      "quoteReference": "LIA-QUOTE-001",
+      "titlePremium": 1800.0,
+      "settlementFee": 850.0,
+      "recordingFee": 225.0,
+      "ownerPolicy": 450.0,
+      "lenderPolicy": 375.0,
+      "expiresAt": "2026-03-19T00:00:00Z"
+    }
   }
 }
 ```
@@ -62,36 +73,51 @@ Request body:
 - `lenderPolicyAmount` optional numeric, defaults to `loanAmount`
 - `endorsements` optional array of strings
 - `transactionDate` optional string
-- `providerContext` optional object for future provider-specific metadata
+- `providerContext` optional object for provider-specific metadata
+- `providerContext.libertyQuote` optional approved quote snapshot bridge when `PRICE_ENGINE_TITLE_RATE_PROVIDER=liberty`
+- `providerContext.libertyQuote.titlePremium` maps to canonical `titlePremium`
+- `providerContext.libertyQuote.settlementFee` maps to canonical `settlementFee`
+- `providerContext.libertyQuote.recordingFee` maps to canonical `recordingFee`
+- `providerContext.libertyQuote.ownerPolicy` maps to canonical `ownerPolicy`
+- `providerContext.libertyQuote.lenderPolicy` maps to canonical `lenderPolicy`
 
 ## Normalized Success Response Shape
 
 ```json
 {
-  "providerKey": "stub",
-  "status": "stub",
-  "quoteReference": null,
+  "providerKey": "liberty",
+  "status": "quoted",
+  "quoteReference": "LIA-QUOTE-001",
   "totals": {
-    "ownerPolicy": 0.0,
-    "lenderPolicy": 0.0,
+    "ownerPolicy": 450.0,
+    "lenderPolicy": 375.0,
     "endorsements": 0.0,
-    "settlementServices": 0.0,
-    "recordingFees": 0.0,
+    "settlementServices": 850.0,
+    "recordingFees": 225.0,
     "transferTaxes": 0.0,
-    "otherFees": 0.0,
-    "total": 0.0
+    "otherFees": 1800.0,
+    "total": 3700.0
   },
-  "lineItems": [],
+  "lineItems": [
+    {
+      "code": "title-premium",
+      "category": "policy",
+      "description": "Liberty title premium",
+      "amount": 1800.0
+    }
+  ],
   "assumptions": [
-    "No approved title-rate provider is configured for automated quoting yet."
+    "Liberty quote values were supplied through the approved quote snapshot bridge."
   ],
   "warnings": [
-    "Stub response only. Vendor implementation remains disabled pending an approved API or documented embed bridge."
+    "Liberty public iframe currently exposes a tokenized app launch rather than a documented backend quote API."
   ],
-  "expiresAt": null,
+  "expiresAt": "2026-03-19T00:00:00Z",
   "providerContext": {
-    "mode": "stub",
-    "requestedProvider": "approved-provider-key"
+    "mode": "quote_snapshot",
+    "requestedProvider": "liberty",
+    "source": "liberty_iframe_snapshot",
+    "automationAvailable": false
   }
 }
 ```
@@ -152,4 +178,5 @@ The proof-bearing fixtures for this route live under:
 
 - If the normalized request or response contract changes, fixtures and tests must change in the same PR.
 - Vendor-specific fields must remain isolated inside `providerContext` unless promoted intentionally in a future additive revision.
-- A non-stub vendor implementation must not be added without explicit approval and updated proof fixtures.
+- Liberty quote retrieval currently depends on an approved quote snapshot bridge because the public iframe does not expose a documented backend quote API in this build.
+- A non-snapshot Liberty automation path must not be added without explicit approval and updated proof fixtures.
