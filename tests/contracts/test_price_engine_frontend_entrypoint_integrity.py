@@ -11,6 +11,7 @@ FRONTEND_ENTRYPOINT_INTEGRITY_WORKFLOW = (
     ROOT / ".github" / "workflows" / "price_engine_frontend_entrypoint_integrity.yml"
 )
 ROUTE_MAP = "docs/architecture/ROUTE_MAP_V1.md"
+TEST_MODULE = "tests/contracts/test_price_engine_frontend_entrypoint_integrity.py"
 
 EXPECTED_ROUTE_ROWS = [
     {
@@ -71,6 +72,11 @@ class PriceEngineFrontendEntrypointIntegrityTests(unittest.TestCase):
     def test_frontend_entrypoint_integrity_workflow_tracks_route_map_dependency(self) -> None:
         text = FRONTEND_ENTRYPOINT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn(f'"{ROUTE_MAP}"', text)
+
+    def test_frontend_entrypoint_integrity_workflow_writes_route_map_summary(self) -> None:
+        text = FRONTEND_ENTRYPOINT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn(TEST_MODULE, text)
+        self.assertIn("route map posture", text)
 
 
 if __name__ == "__main__":

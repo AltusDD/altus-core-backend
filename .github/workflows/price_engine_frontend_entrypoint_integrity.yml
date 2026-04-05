@@ -37,6 +37,7 @@ jobs:
         run: |
           {
             echo "PRICE ENGINE FRONTEND ENTRYPOINT INTEGRITY"
+            echo "- test module: tests/contracts/test_price_engine_frontend_entrypoint_integrity.py"
             echo "- result: pass"
-            echo "- scope: PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md matches coverage index route artifacts and references the aggregate proof gate"
+            echo "- scope: PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md matches coverage index route artifacts, route map posture, and references the aggregate proof gate"
           } >> "$GITHUB_STEP_SUMMARY"
