@@ -5,7 +5,9 @@ on:
     paths:
       - "tests/contracts/test_price_engine_calculate_contract.py"
       - "docs/contracts/PRICE_ENGINE_CALCULATE_CONTRACT_V1.md"
+      - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
       - "docs/contracts/fixtures/price_engine_calculate/**"
+      - "docs/architecture/ROUTE_MAP_V1.md"
       - "azure/functions/asset_ingest/price_engine_handler.py"
       - "azure/functions/asset_ingest/price_engine_service.py"
       - ".github/workflows/price_engine_contract_proof.yml"
