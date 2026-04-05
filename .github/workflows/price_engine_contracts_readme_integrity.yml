@@ -1,0 +1,33 @@
+name: price_engine_contracts_readme_integrity
+
+on:
+  pull_request:
+    paths:
+      - "docs/contracts/README.md"
+      - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
+      - "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
+      - ".github/workflows/price_engine_proof_gate.yml"
+      - ".github/workflows/price_engine_contracts_readme_integrity.yml"
+      - "tests/contracts/test_price_engine_contracts_readme_integrity.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  price-engine-contracts-readme-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run contracts README integrity proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_contracts_readme_integrity.py' -v

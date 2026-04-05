@@ -13,6 +13,7 @@ EXPECTED_TEST_MODULES = [
     "test_price_engine_route_inventory_proof.py",
     "test_price_engine_contract_artifact_integrity.py",
     "test_price_engine_frontend_entrypoint_integrity.py",
+    "test_price_engine_contracts_readme_integrity.py",
 ]
 
 EXPECTED_WORKFLOW_DEPENDENCIES = [
@@ -22,9 +23,11 @@ EXPECTED_WORKFLOW_DEPENDENCIES = [
     ".github/workflows/price_engine_route_inventory_proof.yml",
     ".github/workflows/price_engine_contract_artifact_integrity.yml",
     ".github/workflows/price_engine_frontend_entrypoint_integrity.yml",
+    ".github/workflows/price_engine_contracts_readme_integrity.yml",
 ]
 
 EXPECTED_DOC_DEPENDENCIES = [
+    "docs/contracts/README.md",
     "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md",
     "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md",
     "docs/architecture/ROUTE_MAP_V1.md",
