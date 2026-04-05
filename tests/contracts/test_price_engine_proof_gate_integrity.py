@@ -24,6 +24,7 @@ EXPECTED_WORKFLOW_DEPENDENCIES = [
     ".github/workflows/price_engine_contract_artifact_integrity.yml",
     ".github/workflows/price_engine_frontend_entrypoint_integrity.yml",
     ".github/workflows/price_engine_contracts_readme_integrity.yml",
+    ".github/workflows/price_engine_proof_gate_integrity.yml",
 ]
 
 EXPECTED_DOC_DEPENDENCIES = [
