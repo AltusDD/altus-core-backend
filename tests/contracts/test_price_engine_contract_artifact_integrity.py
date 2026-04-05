@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 COVERAGE_INDEX = ROOT / "docs" / "contracts" / "PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
 FRONTEND_ENTRYPOINT = ROOT / "docs" / "contracts" / "PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
+ARTIFACT_INTEGRITY_WORKFLOW = ROOT / ".github" / "workflows" / "price_engine_contract_artifact_integrity.yml"
 
 EXPECTED_ARTIFACT_PATHS = {
     "docs/contracts/PRICE_ENGINE_CALCULATE_CONTRACT_V1.md",
@@ -61,6 +62,10 @@ class PriceEngineContractArtifactIntegrityTests(unittest.TestCase):
         }
         for artifact_path in entrypoint_only_paths:
             self.assertIn(f"`{artifact_path}`", text)
+
+    def test_artifact_integrity_workflow_tracks_aggregate_proof_gate(self) -> None:
+        text = ARTIFACT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('".github/workflows/price_engine_proof_gate.yml"', text)
 
 
 if __name__ == "__main__":
