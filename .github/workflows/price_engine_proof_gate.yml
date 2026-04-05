@@ -8,6 +8,7 @@ on:
       - "tests/contracts/test_title_rate_quote_contract.py"
       - "tests/contracts/test_price_engine_route_inventory_proof.py"
       - "tests/contracts/test_price_engine_contract_artifact_integrity.py"
+      - "tests/contracts/test_price_engine_proof_gate_integrity.py"
       - "docs/contracts/PRICE_ENGINE_CALCULATE_CONTRACT_V1.md"
       - "docs/contracts/PRICE_ENGINE_CALCULATIONS_PREVIEW_CONTRACT_V1.md"
       - "docs/contracts/TITLE_RATE_PROVIDER_ADAPTER_CONTRACT_V1.md"
@@ -56,6 +57,7 @@ jobs:
           python -m unittest discover -s tests/contracts -p 'test_title_rate_quote_contract.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_route_inventory_proof.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_contract_artifact_integrity.py' -v
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_proof_gate_integrity.py' -v
 
       - name: Write proof gate summary
         shell: bash
@@ -64,5 +66,5 @@ jobs:
             echo "PRICE ENGINE PROOF GATE"
             echo "- result: pass"
             echo "- route proofs: calculate, calculations-preview, title-rate-quote"
-            echo "- governance proofs: route inventory, contract artifact integrity"
+            echo "- governance proofs: route inventory, contract artifact integrity, proof gate integrity"
           } >> "$GITHUB_STEP_SUMMARY"
