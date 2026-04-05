@@ -13,6 +13,8 @@ This folder holds contract-facing documentation for database-backed behavior.
 
 - Current gap: `docs/contracts/ASSET_SURFACE_CONTRACTS_V1.md` is referenced by historical artifacts but is not present on `main`.
 - Current DB inventory authority: `docs/database/SCHEMA_INVENTORY_V1.md`
+- ECC route coverage index: `docs/contracts/ECC_CONTRACT_COVERAGE_INDEX_V1.md`
+- Price Engine route coverage index: `docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md`
 
 ## Database Autonomy Linkage
 
