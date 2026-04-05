@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PROOF_GATE_WORKFLOW = ROOT / ".github" / "workflows" / "price_engine_proof_gate.yml"
+PROOF_GATE_INTEGRITY_WORKFLOW = ROOT / ".github" / "workflows" / "price_engine_proof_gate_integrity.yml"
 
 EXPECTED_TEST_MODULES = [
     "test_price_engine_calculate_contract.py",
@@ -50,6 +51,23 @@ class PriceEngineProofGateIntegrityTests(unittest.TestCase):
         text = PROOF_GATE_WORKFLOW.read_text(encoding="utf-8")
         for doc_path in EXPECTED_DOC_DEPENDENCIES:
             self.assertIn(doc_path, text)
+
+    def test_dedicated_proof_gate_integrity_workflow_tracks_same_dependencies(self) -> None:
+        text = PROOF_GATE_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("test_price_engine_proof_gate_integrity.py", text)
+        self.assertIn(".github/workflows/price_engine_proof_gate.yml", text)
+        for workflow_path in EXPECTED_WORKFLOW_DEPENDENCIES:
+            self.assertIn(workflow_path, text)
+        for doc_path in EXPECTED_DOC_DEPENDENCIES:
+            self.assertIn(doc_path, text)
+
+    def test_dedicated_proof_gate_integrity_workflow_writes_summary(self) -> None:
+        text = PROOF_GATE_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("PRICE ENGINE PROOF GATE INTEGRITY", text)
+        self.assertIn(
+            "aggregate proof gate coverage for route proofs, governance proofs, and shared dependency triggers",
+            text,
+        )
 
 
 if __name__ == "__main__":
