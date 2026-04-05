@@ -8,6 +8,7 @@ CONTRACTS_README = ROOT / "docs" / "contracts" / "README.md"
 
 EXPECTED_PRICE_ENGINE_REFERENCES = [
     "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md",
+    "docs/architecture/ROUTE_MAP_V1.md",
     "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md",
     ".github/workflows/price_engine_proof_gate.yml",
 ]
