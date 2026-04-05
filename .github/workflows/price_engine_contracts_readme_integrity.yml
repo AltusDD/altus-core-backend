@@ -32,3 +32,13 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest discover -s tests/contracts -p 'test_price_engine_contracts_readme_integrity.py' -v
+
+      - name: Write contracts README integrity summary
+        shell: bash
+        run: |
+          {
+            echo "PRICE ENGINE CONTRACTS README INTEGRITY"
+            echo "- test module: tests/contracts/test_price_engine_contracts_readme_integrity.py"
+            echo "- result: pass"
+            echo "- scope: README discovery references for frontend entrypoint, route map, coverage index, and aggregate proof gate"
+          } >> "$GITHUB_STEP_SUMMARY"
