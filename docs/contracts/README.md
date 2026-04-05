@@ -16,6 +16,7 @@ This folder holds contract-facing documentation for database-backed behavior.
 - Price Engine frontend entrypoint: `docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md`
 - ECC route coverage index: `docs/contracts/ECC_CONTRACT_COVERAGE_INDEX_V1.md`
 - Price Engine route coverage index: `docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md`
+- Price Engine aggregate proof gate: `.github/workflows/price_engine_proof_gate.yml`
 
 ## Database Autonomy Linkage
 

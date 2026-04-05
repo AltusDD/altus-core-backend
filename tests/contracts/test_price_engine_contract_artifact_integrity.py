@@ -20,6 +20,7 @@ EXPECTED_ARTIFACT_PATHS = {
     ".github/workflows/price_engine_contract_proof.yml",
     ".github/workflows/price_engine_calculations_preview_contract_proof.yml",
     ".github/workflows/title_rate_quote_contract_proof.yml",
+    ".github/workflows/price_engine_proof_gate.yml",
 }
 
 
@@ -56,6 +57,7 @@ class PriceEngineContractArtifactIntegrityTests(unittest.TestCase):
             ".github/workflows/price_engine_contract_proof.yml",
             ".github/workflows/price_engine_calculations_preview_contract_proof.yml",
             ".github/workflows/title_rate_quote_contract_proof.yml",
+            ".github/workflows/price_engine_proof_gate.yml",
         }
         for artifact_path in entrypoint_only_paths:
             self.assertIn(f"`{artifact_path}`", text)

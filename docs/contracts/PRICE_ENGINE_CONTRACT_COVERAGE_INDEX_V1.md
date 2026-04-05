@@ -13,6 +13,9 @@ All discovered Price Engine routes currently have:
 - route-scoped contract tests
 - route-scoped CI workflows
 
+Accepted aggregate backend proof for the current live Price Engine surface is:
+- `.github/workflows/price_engine_proof_gate.yml`
+
 ## Route Coverage Index
 
 | Route | Contract doc | Fixtures | Contract test | Route-scoped CI workflow | Current proof status |
@@ -28,3 +31,4 @@ The route inventory above is grounded in the current route declarations in `azur
 ## Maintenance Rule
 
 If a discovered Price Engine route changes contract shape, its contract doc, fixtures, test module, and route-scoped CI workflow must be updated in the same PR.
+The aggregate proof gate at `.github/workflows/price_engine_proof_gate.yml` must stay aligned with the accepted live route surface and its governance proofs.
