@@ -1,0 +1,43 @@
+name: price_engine_route_inventory_proof
+
+on:
+  pull_request:
+    paths:
+      - "tests/contracts/test_price_engine_route_inventory_proof.py"
+      - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
+      - "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
+      - "docs/architecture/ROUTE_MAP_V1.md"
+      - "azure/functions/asset_ingest/function_app.py"
+      - ".github/workflows/price_engine_route_inventory_proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  price-engine-route-inventory-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run price engine route inventory proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_route_inventory_proof.py' -v
+
+      - name: Write route inventory proof summary
+        shell: bash
+        run: |
+          {
+            echo "PRICE ENGINE ROUTE INVENTORY PROOF"
+            echo "- test module: tests/contracts/test_price_engine_route_inventory_proof.py"
+            echo "- result: pass"
+            echo "- scope: live price-engine decorators, route map, coverage index, and frontend entrypoint"
+          } >> "$GITHUB_STEP_SUMMARY"
