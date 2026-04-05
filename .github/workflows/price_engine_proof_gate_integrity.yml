@@ -1,0 +1,51 @@
+name: price_engine_proof_gate_integrity
+
+on:
+  pull_request:
+    paths:
+      - "tests/contracts/test_price_engine_proof_gate_integrity.py"
+      - "docs/contracts/README.md"
+      - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
+      - "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
+      - "docs/architecture/ROUTE_MAP_V1.md"
+      - ".github/workflows/price_engine_contract_proof.yml"
+      - ".github/workflows/price_engine_calculations_preview_contract_proof.yml"
+      - ".github/workflows/title_rate_quote_contract_proof.yml"
+      - ".github/workflows/price_engine_route_inventory_proof.yml"
+      - ".github/workflows/price_engine_contract_artifact_integrity.yml"
+      - ".github/workflows/price_engine_frontend_entrypoint_integrity.yml"
+      - ".github/workflows/price_engine_contracts_readme_integrity.yml"
+      - ".github/workflows/price_engine_proof_gate.yml"
+      - ".github/workflows/price_engine_proof_gate_integrity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  price-engine-proof-gate-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run price engine proof gate integrity proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_proof_gate_integrity.py' -v
+
+      - name: Write proof gate integrity summary
+        shell: bash
+        run: |
+          {
+            echo "PRICE ENGINE PROOF GATE INTEGRITY"
+            echo "- test module: tests/contracts/test_price_engine_proof_gate_integrity.py"
+            echo "- result: pass"
+            echo "- scope: aggregate proof gate coverage for route proofs, governance proofs, and shared dependency triggers"
+          } >> "$GITHUB_STEP_SUMMARY"
