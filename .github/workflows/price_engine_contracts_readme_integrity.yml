@@ -3,6 +3,7 @@ name: price_engine_contracts_readme_integrity
 on:
   pull_request:
     paths:
+      - "docs/architecture/ROUTE_MAP_V1.md"
       - "docs/contracts/README.md"
       - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
       - "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
