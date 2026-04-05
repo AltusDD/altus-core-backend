@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 COVERAGE_INDEX = ROOT / "docs" / "contracts" / "PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
 FRONTEND_ENTRYPOINT = ROOT / "docs" / "contracts" / "PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
 ARTIFACT_INTEGRITY_WORKFLOW = ROOT / ".github" / "workflows" / "price_engine_contract_artifact_integrity.yml"
+TEST_MODULE = "tests/contracts/test_price_engine_contract_artifact_integrity.py"
 
 EXPECTED_ARTIFACT_PATHS = {
     "docs/contracts/PRICE_ENGINE_CALCULATE_CONTRACT_V1.md",
@@ -66,6 +67,11 @@ class PriceEngineContractArtifactIntegrityTests(unittest.TestCase):
     def test_artifact_integrity_workflow_tracks_aggregate_proof_gate(self) -> None:
         text = ARTIFACT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('".github/workflows/price_engine_proof_gate.yml"', text)
+
+    def test_artifact_integrity_workflow_writes_proof_gate_summary(self) -> None:
+        text = ARTIFACT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn(TEST_MODULE, text)
+        self.assertIn("aggregate proof gate", text)
 
 
 if __name__ == "__main__":

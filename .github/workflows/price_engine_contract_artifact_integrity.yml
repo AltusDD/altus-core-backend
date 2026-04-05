@@ -50,5 +50,5 @@ jobs:
             echo "PRICE ENGINE CONTRACT ARTIFACT INTEGRITY"
             echo "- test module: tests/contracts/test_price_engine_contract_artifact_integrity.py"
             echo "- result: pass"
-            echo "- scope: coverage index and frontend entrypoint references must resolve to real proof artifacts"
+            echo "- scope: coverage index and frontend entrypoint references must resolve to real proof artifacts, including the aggregate proof gate"
           } >> "$GITHUB_STEP_SUMMARY"
