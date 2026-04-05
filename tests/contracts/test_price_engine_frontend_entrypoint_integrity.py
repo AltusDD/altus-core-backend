@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_ENTRYPOINT = ROOT / "docs" / "contracts" / "PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
 COVERAGE_INDEX = ROOT / "docs" / "contracts" / "PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
+PROOF_GATE_WORKFLOW = ".github/workflows/price_engine_proof_gate.yml"
 
 EXPECTED_ROUTE_ROWS = [
     {
@@ -58,6 +59,10 @@ class PriceEngineFrontendEntrypointIntegrityTests(unittest.TestCase):
                 f" `{row['workflow']}` |"
             )
             self.assertIn(expected_fragment, text)
+
+    def test_frontend_entrypoint_references_aggregate_proof_gate(self) -> None:
+        text = FRONTEND_ENTRYPOINT.read_text(encoding="utf-8")
+        self.assertIn(f"`{PROOF_GATE_WORKFLOW}`", text)
 
 
 if __name__ == "__main__":

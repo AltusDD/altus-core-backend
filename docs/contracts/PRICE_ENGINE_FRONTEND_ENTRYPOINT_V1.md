@@ -21,6 +21,10 @@ Canonical proof-bearing route coverage is recorded in:
 
 - `docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md`
 
+Accepted aggregate backend proof is recorded in:
+
+- `.github/workflows/price_engine_proof_gate.yml`
+
 ## Live Route Entry Table
 
 | Route | Purpose | Primary contract doc | Fixtures | Contract test | Route-scoped CI workflow |
@@ -34,6 +38,7 @@ Canonical proof-bearing route coverage is recorded in:
 - Frontend work should treat repo contract docs as authoritative for field shape and failure-envelope behavior.
 - Route additions or removals are not accepted frontend truth until they appear in `docs/architecture/ROUTE_MAP_V1.md`.
 - A Price Engine route is not treated as proof-bearing until its fixtures, contract test, and route-scoped CI workflow are all present.
+- The accepted aggregate backend proof gate for this surface is `.github/workflows/price_engine_proof_gate.yml`.
 - No speculative frontend dependency should be taken on routes not listed in this document.
 
 ## Maintenance Rule
