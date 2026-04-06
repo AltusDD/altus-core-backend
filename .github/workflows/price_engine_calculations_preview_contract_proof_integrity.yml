@@ -1,0 +1,47 @@
+name: price_engine_calculations_preview_contract_proof_integrity
+
+on:
+  pull_request:
+    paths:
+      - "tests/contracts/test_price_engine_calculations_preview_contract_proof_integrity.py"
+      - "tests/contracts/test_price_engine_calculations_preview_contract.py"
+      - "docs/contracts/PRICE_ENGINE_CALCULATIONS_PREVIEW_CONTRACT_V1.md"
+      - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
+      - "docs/architecture/ROUTE_MAP_V1.md"
+      - "docs/contracts/fixtures/price_engine_calculations_preview/**"
+      - "azure/functions/asset_ingest/price_engine_calculations_preview_handler.py"
+      - "azure/functions/asset_ingest/price_engine_calculations.py"
+      - ".github/workflows/price_engine_calculations_preview_contract_proof.yml"
+      - ".github/workflows/price_engine_calculations_preview_contract_proof_integrity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  price-engine-calculations-preview-contract-proof-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run calculations preview contract proof integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_calculations_preview_contract_proof_integrity.py' -v
+
+      - name: Write calculations preview proof integrity summary
+        shell: bash
+        run: |
+          {
+            echo "PRICE ENGINE CALCULATIONS PREVIEW CONTRACT PROOF INTEGRITY"
+            echo "- test module: tests/contracts/test_price_engine_calculations_preview_contract_proof_integrity.py"
+            echo "- result: pass"
+            echo "- scope: calculations-preview route proof workflow tracks contract, fixtures, route map, runtime files, and route-scoped proof triggers"
+          } >> "$GITHUB_STEP_SUMMARY"
