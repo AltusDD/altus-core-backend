@@ -1,23 +1,25 @@
-name: title_rate_quote_contract_proof
+name: title_rate_quote_contract_proof_integrity
 
 on:
   pull_request:
     paths:
+      - "tests/contracts/test_title_rate_quote_contract_proof_integrity.py"
       - "tests/contracts/test_title_rate_quote_contract.py"
       - "docs/contracts/TITLE_RATE_PROVIDER_ADAPTER_CONTRACT_V1.md"
       - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
-      - "docs/contracts/fixtures/title_rate_quote/**"
       - "docs/architecture/ROUTE_MAP_V1.md"
+      - "docs/contracts/fixtures/title_rate_quote/**"
       - "azure/functions/asset_ingest/title_rate_handler.py"
       - "azure/functions/asset_ingest/title_rate_provider.py"
       - ".github/workflows/title_rate_quote_contract_proof.yml"
+      - ".github/workflows/title_rate_quote_contract_proof_integrity.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  title-rate-quote-contract-proof:
+  title-rate-quote-contract-proof-integrity:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,20 +30,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run title rate quote contract proof
+      - name: Run title rate quote contract proof integrity
         shell: bash
         run: |
           set -euo pipefail
-          python -m unittest discover -s tests/contracts -p 'test_title_rate_quote_contract.py' -v
+          python -m unittest discover -s tests/contracts -p 'test_title_rate_quote_contract_proof_integrity.py' -v
 
-      - name: Write contract proof summary
+      - name: Write title rate proof integrity summary
         shell: bash
         run: |
           {
-            echo "TITLE RATE QUOTE CONTRACT PROOF"
-            echo "- test module: tests/contracts/test_title_rate_quote_contract.py"
+            echo "TITLE RATE QUOTE CONTRACT PROOF INTEGRITY"
+            echo "- test module: tests/contracts/test_title_rate_quote_contract_proof_integrity.py"
             echo "- result: pass"
-            echo "- scope: POST /api/price-engine/title-rate-quote"
-            echo "- route posture: provider-normalized title quote seam"
-            echo "- provider gate: PRICE_ENGINE_TITLE_RATE_PROVIDER"
+            echo "- scope: title-rate route proof workflow tracks contract, fixtures, route map, runtime files, and PRICE_ENGINE_TITLE_RATE_PROVIDER posture"
           } >> "$GITHUB_STEP_SUMMARY"
