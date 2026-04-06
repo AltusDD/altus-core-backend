@@ -9,6 +9,7 @@ PROOF_GATE_INTEGRITY_WORKFLOW = ROOT / ".github" / "workflows" / "price_engine_p
 
 EXPECTED_TEST_MODULES = [
     "test_price_engine_calculate_contract.py",
+    "test_price_engine_contract_proof_integrity.py",
     "test_price_engine_calculations_preview_contract.py",
     "test_title_rate_quote_contract.py",
     "test_title_rate_quote_contract_proof_integrity.py",
@@ -20,6 +21,7 @@ EXPECTED_TEST_MODULES = [
 
 EXPECTED_WORKFLOW_DEPENDENCIES = [
     ".github/workflows/price_engine_contract_proof.yml",
+    ".github/workflows/price_engine_contract_proof_integrity.yml",
     ".github/workflows/price_engine_calculations_preview_contract_proof.yml",
     ".github/workflows/title_rate_quote_contract_proof.yml",
     ".github/workflows/title_rate_quote_contract_proof_integrity.yml",
@@ -67,7 +69,7 @@ class PriceEngineProofGateIntegrityTests(unittest.TestCase):
         text = PROOF_GATE_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("PRICE ENGINE PROOF GATE INTEGRITY", text)
         self.assertIn(
-            "aggregate proof gate coverage for route proofs, title-rate workflow integrity, governance proofs, and shared dependency triggers",
+            "aggregate proof gate coverage for route proofs, calculate workflow integrity, title-rate workflow integrity, governance proofs, and shared dependency triggers",
             text,
         )
 

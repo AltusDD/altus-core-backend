@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "tests/contracts/test_price_engine_calculate_contract.py"
+      - "tests/contracts/test_price_engine_contract_proof_integrity.py"
       - "tests/contracts/test_price_engine_calculations_preview_contract.py"
       - "tests/contracts/test_title_rate_quote_contract.py"
       - "tests/contracts/test_title_rate_quote_contract_proof_integrity.py"
@@ -30,6 +31,7 @@ on:
       - "azure/functions/asset_ingest/title_rate_handler.py"
       - "azure/functions/asset_ingest/title_rate_provider.py"
       - ".github/workflows/price_engine_contract_proof.yml"
+      - ".github/workflows/price_engine_contract_proof_integrity.yml"
       - ".github/workflows/price_engine_calculations_preview_contract_proof.yml"
       - ".github/workflows/title_rate_quote_contract_proof.yml"
       - ".github/workflows/title_rate_quote_contract_proof_integrity.yml"
@@ -61,6 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest discover -s tests/contracts -p 'test_price_engine_calculate_contract.py' -v
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_contract_proof_integrity.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_calculations_preview_contract.py' -v
           python -m unittest discover -s tests/contracts -p 'test_title_rate_quote_contract.py' -v
           python -m unittest discover -s tests/contracts -p 'test_title_rate_quote_contract_proof_integrity.py' -v
@@ -77,5 +80,5 @@ jobs:
             echo "PRICE ENGINE PROOF GATE"
             echo "- result: pass"
             echo "- route proofs: calculate, calculations-preview, title-rate-quote"
-            echo "- governance proofs: title-rate workflow integrity, route inventory, contract artifact integrity, frontend entrypoint integrity, contracts README integrity, proof gate integrity"
+            echo "- governance proofs: calculate workflow integrity, title-rate workflow integrity, route inventory, contract artifact integrity, frontend entrypoint integrity, contracts README integrity, proof gate integrity"
           } >> "$GITHUB_STEP_SUMMARY"

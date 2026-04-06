@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+WORKFLOW = ROOT / ".github" / "workflows" / "price_engine_contract_proof.yml"
+
+EXPECTED_PATHS = [
+    "tests/contracts/test_price_engine_calculate_contract.py",
+    "docs/contracts/PRICE_ENGINE_CALCULATE_CONTRACT_V1.md",
+    "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md",
+    "docs/contracts/fixtures/price_engine_calculate/**",
+    "docs/architecture/ROUTE_MAP_V1.md",
+    "azure/functions/asset_ingest/price_engine_handler.py",
+    "azure/functions/asset_ingest/price_engine_service.py",
+    ".github/workflows/price_engine_contract_proof.yml",
+]
+
+
+class PriceEngineContractProofIntegrityTests(unittest.TestCase):
+    def test_workflow_tracks_expected_calculate_dependencies(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        for path in EXPECTED_PATHS:
+            self.assertIn(path, text)
+
+    def test_workflow_runs_expected_test_module(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("test_price_engine_calculate_contract.py", text)
+
+    def test_workflow_writes_route_summary(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("PRICE ENGINE CONTRACT PROOF", text)
+        self.assertIn("POST /api/price-engine/calculate", text)
+
+
+if __name__ == "__main__":
+    unittest.main()

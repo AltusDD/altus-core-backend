@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "tests/contracts/test_price_engine_proof_gate_integrity.py"
+      - "tests/contracts/test_price_engine_contract_proof_integrity.py"
       - "docs/contracts/README.md"
       - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
       - "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
       - "docs/architecture/ROUTE_MAP_V1.md"
       - ".github/workflows/price_engine_contract_proof.yml"
+      - ".github/workflows/price_engine_contract_proof_integrity.yml"
       - ".github/workflows/price_engine_calculations_preview_contract_proof.yml"
       - ".github/workflows/title_rate_quote_contract_proof.yml"
       - ".github/workflows/title_rate_quote_contract_proof_integrity.yml"
@@ -48,5 +50,5 @@ jobs:
             echo "PRICE ENGINE PROOF GATE INTEGRITY"
             echo "- test module: tests/contracts/test_price_engine_proof_gate_integrity.py"
             echo "- result: pass"
-            echo "- scope: aggregate proof gate coverage for route proofs, title-rate workflow integrity, governance proofs, and shared dependency triggers"
+            echo "- scope: aggregate proof gate coverage for route proofs, calculate workflow integrity, title-rate workflow integrity, governance proofs, and shared dependency triggers"
           } >> "$GITHUB_STEP_SUMMARY"
