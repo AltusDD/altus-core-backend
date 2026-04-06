@@ -17,6 +17,12 @@ All discovered Price Engine routes currently have:
 Accepted aggregate backend proof for the current live Price Engine surface is:
 - `.github/workflows/price_engine_proof_gate.yml`
 
+Shared governance proof for the FE-facing contract artifact chain is:
+- `.github/workflows/price_engine_contract_artifact_integrity.yml`
+- `.github/workflows/price_engine_contract_artifact_integrity_proof.yml`
+- `tests/contracts/test_price_engine_contract_artifact_integrity.py`
+- `tests/contracts/test_price_engine_contract_artifact_integrity_proof.py`
+
 ## Route Coverage Index
 
 | Route | Contract doc | Fixtures | Contract test | Workflow integrity test | Route-scoped CI workflow | Workflow integrity CI | Current proof status |

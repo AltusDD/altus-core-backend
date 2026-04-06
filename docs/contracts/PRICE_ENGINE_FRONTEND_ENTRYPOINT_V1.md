@@ -25,6 +25,13 @@ Accepted aggregate backend proof is recorded in:
 
 - `.github/workflows/price_engine_proof_gate.yml`
 
+Shared FE-facing contract artifact governance is recorded in:
+
+- `.github/workflows/price_engine_contract_artifact_integrity.yml`
+- `.github/workflows/price_engine_contract_artifact_integrity_proof.yml`
+- `tests/contracts/test_price_engine_contract_artifact_integrity.py`
+- `tests/contracts/test_price_engine_contract_artifact_integrity_proof.py`
+
 ## Live Route Entry Table
 
 | Route | Purpose | Primary contract doc | Fixtures | Contract test | Workflow integrity test | Route-scoped CI workflow | Workflow integrity CI |

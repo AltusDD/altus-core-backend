@@ -37,7 +37,7 @@ class PriceEngineContractArtifactIntegrityProofTests(unittest.TestCase):
         text = ARTIFACT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("PRICE ENGINE CONTRACT ARTIFACT INTEGRITY", text)
         self.assertIn(
-            "coverage index and frontend entrypoint references must resolve to real route proof artifacts, route workflow integrity proofs, and the aggregate proof gate",
+            "coverage index and frontend entrypoint references must resolve to real route proof artifacts, route workflow integrity proofs, contract-artifact workflow integrity, and the aggregate proof gate",
             text,
         )
 

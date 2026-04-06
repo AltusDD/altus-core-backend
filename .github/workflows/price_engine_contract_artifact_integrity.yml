@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "tests/contracts/test_price_engine_contract_artifact_integrity.py"
+      - "tests/contracts/test_price_engine_contract_artifact_integrity_proof.py"
       - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
       - "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
       - "docs/contracts/PRICE_ENGINE_CALCULATE_CONTRACT_V1.md"
@@ -26,6 +27,7 @@ on:
       - ".github/workflows/title_rate_quote_contract_proof_integrity.yml"
       - ".github/workflows/price_engine_proof_gate.yml"
       - ".github/workflows/price_engine_contract_artifact_integrity.yml"
+      - ".github/workflows/price_engine_contract_artifact_integrity_proof.yml"
   workflow_dispatch:
 
 permissions:
@@ -56,5 +58,5 @@ jobs:
             echo "PRICE ENGINE CONTRACT ARTIFACT INTEGRITY"
             echo "- test module: tests/contracts/test_price_engine_contract_artifact_integrity.py"
             echo "- result: pass"
-            echo "- scope: coverage index and frontend entrypoint references must resolve to real route proof artifacts, route workflow integrity proofs, and the aggregate proof gate"
+            echo "- scope: coverage index and frontend entrypoint references must resolve to real route proof artifacts, route workflow integrity proofs, contract-artifact workflow integrity, and the aggregate proof gate"
           } >> "$GITHUB_STEP_SUMMARY"
