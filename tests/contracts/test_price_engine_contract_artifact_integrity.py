@@ -17,11 +17,17 @@ EXPECTED_ARTIFACT_PATHS = {
     "docs/contracts/fixtures/price_engine_calculations_preview/",
     "docs/contracts/fixtures/title_rate_quote/",
     "tests/contracts/test_price_engine_calculate_contract.py",
+    "tests/contracts/test_price_engine_contract_proof_integrity.py",
     "tests/contracts/test_price_engine_calculations_preview_contract.py",
+    "tests/contracts/test_price_engine_calculations_preview_contract_proof_integrity.py",
     "tests/contracts/test_title_rate_quote_contract.py",
+    "tests/contracts/test_title_rate_quote_contract_proof_integrity.py",
     ".github/workflows/price_engine_contract_proof.yml",
+    ".github/workflows/price_engine_contract_proof_integrity.yml",
     ".github/workflows/price_engine_calculations_preview_contract_proof.yml",
+    ".github/workflows/price_engine_calculations_preview_contract_proof_integrity.yml",
     ".github/workflows/title_rate_quote_contract_proof.yml",
+    ".github/workflows/title_rate_quote_contract_proof_integrity.yml",
     ".github/workflows/price_engine_proof_gate.yml",
 }
 
@@ -54,11 +60,17 @@ class PriceEngineContractArtifactIntegrityTests(unittest.TestCase):
             "docs/contracts/fixtures/price_engine_calculations_preview/",
             "docs/contracts/fixtures/title_rate_quote/",
             "tests/contracts/test_price_engine_calculate_contract.py",
+            "tests/contracts/test_price_engine_contract_proof_integrity.py",
             "tests/contracts/test_price_engine_calculations_preview_contract.py",
+            "tests/contracts/test_price_engine_calculations_preview_contract_proof_integrity.py",
             "tests/contracts/test_title_rate_quote_contract.py",
+            "tests/contracts/test_title_rate_quote_contract_proof_integrity.py",
             ".github/workflows/price_engine_contract_proof.yml",
+            ".github/workflows/price_engine_contract_proof_integrity.yml",
             ".github/workflows/price_engine_calculations_preview_contract_proof.yml",
+            ".github/workflows/price_engine_calculations_preview_contract_proof_integrity.yml",
             ".github/workflows/title_rate_quote_contract_proof.yml",
+            ".github/workflows/title_rate_quote_contract_proof_integrity.yml",
             ".github/workflows/price_engine_proof_gate.yml",
         }
         for artifact_path in entrypoint_only_paths:
@@ -67,6 +79,12 @@ class PriceEngineContractArtifactIntegrityTests(unittest.TestCase):
     def test_artifact_integrity_workflow_tracks_aggregate_proof_gate(self) -> None:
         text = ARTIFACT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('".github/workflows/price_engine_proof_gate.yml"', text)
+
+    def test_artifact_integrity_workflow_tracks_route_workflow_integrity_surfaces(self) -> None:
+        text = ARTIFACT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('".github/workflows/price_engine_contract_proof_integrity.yml"', text)
+        self.assertIn('".github/workflows/price_engine_calculations_preview_contract_proof_integrity.yml"', text)
+        self.assertIn('".github/workflows/title_rate_quote_contract_proof_integrity.yml"', text)
 
     def test_artifact_integrity_workflow_writes_proof_gate_summary(self) -> None:
         text = ARTIFACT_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
