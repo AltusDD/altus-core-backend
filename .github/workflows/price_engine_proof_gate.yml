@@ -12,6 +12,7 @@ on:
       - "tests/contracts/test_price_engine_route_inventory_proof.py"
       - "tests/contracts/test_price_engine_route_inventory_proof_integrity.py"
       - "tests/contracts/test_price_engine_contract_artifact_integrity.py"
+      - "tests/contracts/test_price_engine_contract_artifact_integrity_proof.py"
       - "tests/contracts/test_price_engine_frontend_entrypoint_integrity.py"
       - "tests/contracts/test_price_engine_frontend_entrypoint_integrity_proof.py"
       - "tests/contracts/test_price_engine_contracts_readme_integrity.py"
@@ -43,6 +44,7 @@ on:
       - ".github/workflows/price_engine_route_inventory_proof.yml"
       - ".github/workflows/price_engine_route_inventory_proof_integrity.yml"
       - ".github/workflows/price_engine_contract_artifact_integrity.yml"
+      - ".github/workflows/price_engine_contract_artifact_integrity_proof.yml"
       - ".github/workflows/price_engine_frontend_entrypoint_integrity.yml"
       - ".github/workflows/price_engine_frontend_entrypoint_integrity_proof.yml"
       - ".github/workflows/price_engine_contracts_readme_integrity.yml"
@@ -79,6 +81,7 @@ jobs:
           python -m unittest discover -s tests/contracts -p 'test_price_engine_route_inventory_proof.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_route_inventory_proof_integrity.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_contract_artifact_integrity.py' -v
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_contract_artifact_integrity_proof.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_frontend_entrypoint_integrity.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_frontend_entrypoint_integrity_proof.py' -v
           python -m unittest discover -s tests/contracts -p 'test_price_engine_contracts_readme_integrity.py' -v
@@ -92,5 +95,5 @@ jobs:
             echo "PRICE ENGINE PROOF GATE"
             echo "- result: pass"
             echo "- route proofs: calculate, calculations-preview, title-rate-quote"
-            echo "- governance proofs: calculate workflow integrity, calculations-preview workflow integrity, title-rate workflow integrity, route inventory, route-inventory workflow integrity, contract artifact integrity, frontend entrypoint integrity, frontend-entrypoint workflow integrity, contracts README integrity, contracts-readme workflow integrity, proof gate integrity"
+            echo "- governance proofs: calculate workflow integrity, calculations-preview workflow integrity, title-rate workflow integrity, route inventory, route-inventory workflow integrity, contract artifact integrity, contract-artifact workflow integrity, frontend entrypoint integrity, frontend-entrypoint workflow integrity, contracts README integrity, contracts-readme workflow integrity, proof gate integrity"
           } >> "$GITHUB_STEP_SUMMARY"

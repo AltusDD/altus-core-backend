@@ -1,0 +1,47 @@
+name: price_engine_contract_artifact_integrity_proof
+
+on:
+  pull_request:
+    paths:
+      - "tests/contracts/test_price_engine_contract_artifact_integrity_proof.py"
+      - "tests/contracts/test_price_engine_contract_artifact_integrity.py"
+      - "docs/contracts/PRICE_ENGINE_CONTRACT_COVERAGE_INDEX_V1.md"
+      - "docs/contracts/PRICE_ENGINE_FRONTEND_ENTRYPOINT_V1.md"
+      - "docs/contracts/PRICE_ENGINE_CALCULATE_CONTRACT_V1.md"
+      - "docs/contracts/PRICE_ENGINE_CALCULATIONS_PREVIEW_CONTRACT_V1.md"
+      - "docs/contracts/TITLE_RATE_PROVIDER_ADAPTER_CONTRACT_V1.md"
+      - ".github/workflows/price_engine_proof_gate.yml"
+      - ".github/workflows/price_engine_contract_artifact_integrity.yml"
+      - ".github/workflows/price_engine_contract_artifact_integrity_proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  price-engine-contract-artifact-integrity-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run price engine contract artifact integrity proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/contracts -p 'test_price_engine_contract_artifact_integrity_proof.py' -v
+
+      - name: Write contract artifact integrity proof summary
+        shell: bash
+        run: |
+          {
+            echo "PRICE ENGINE CONTRACT ARTIFACT INTEGRITY PROOF"
+            echo "- test module: tests/contracts/test_price_engine_contract_artifact_integrity_proof.py"
+            echo "- result: pass"
+            echo "- scope: contract artifact integrity workflow coverage for route proof artifacts, route workflow integrity proofs, aggregate proof gate references, and shared dependency triggers"
+          } >> "$GITHUB_STEP_SUMMARY"

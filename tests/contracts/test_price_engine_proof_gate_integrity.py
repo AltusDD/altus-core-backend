@@ -17,6 +17,7 @@ EXPECTED_TEST_MODULES = [
     "test_price_engine_route_inventory_proof.py",
     "test_price_engine_route_inventory_proof_integrity.py",
     "test_price_engine_contract_artifact_integrity.py",
+    "test_price_engine_contract_artifact_integrity_proof.py",
     "test_price_engine_frontend_entrypoint_integrity.py",
     "test_price_engine_frontend_entrypoint_integrity_proof.py",
     "test_price_engine_contracts_readme_integrity.py",
@@ -33,6 +34,7 @@ EXPECTED_WORKFLOW_DEPENDENCIES = [
     ".github/workflows/price_engine_route_inventory_proof.yml",
     ".github/workflows/price_engine_route_inventory_proof_integrity.yml",
     ".github/workflows/price_engine_contract_artifact_integrity.yml",
+    ".github/workflows/price_engine_contract_artifact_integrity_proof.yml",
     ".github/workflows/price_engine_frontend_entrypoint_integrity.yml",
     ".github/workflows/price_engine_frontend_entrypoint_integrity_proof.yml",
     ".github/workflows/price_engine_contracts_readme_integrity.yml",
@@ -77,7 +79,7 @@ class PriceEngineProofGateIntegrityTests(unittest.TestCase):
         text = PROOF_GATE_INTEGRITY_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("PRICE ENGINE PROOF GATE INTEGRITY", text)
         self.assertIn(
-            "aggregate proof gate coverage for route proofs, calculate workflow integrity, calculations-preview workflow integrity, title-rate workflow integrity, route-inventory workflow integrity, frontend-entrypoint workflow integrity, contracts-readme workflow integrity, governance proofs, and shared dependency triggers",
+            "aggregate proof gate coverage for route proofs, calculate workflow integrity, calculations-preview workflow integrity, title-rate workflow integrity, route-inventory workflow integrity, contract-artifact workflow integrity, frontend-entrypoint workflow integrity, contracts-readme workflow integrity, governance proofs, and shared dependency triggers",
             text,
         )
 
