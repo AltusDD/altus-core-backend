@@ -62,8 +62,9 @@ class AdoptionScaffoldTests(unittest.TestCase):
     def test_governance_checks_reference_repo_authorities(self) -> None:
         checks = build_governance_checks()
 
-        self.assertGreaterEqual(len(checks), 4)
+        self.assertGreaterEqual(len(checks), 5)
         self.assertTrue(any(check.path == "docs/architecture/ROUTE_MAP_V1.md" for check in checks))
+        self.assertTrue(any(check.path == "docs/architecture/BACKEND_ADOPTION_IMPLEMENTATION_NOTE_V2.md" for check in checks))
         self.assertTrue(any(check.path == "supabase/verification/README.md" for check in checks))
 
     def test_deferred_rangekeeper_gateway_is_non_executable(self) -> None:

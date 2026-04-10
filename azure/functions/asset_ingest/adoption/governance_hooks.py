@@ -28,6 +28,11 @@ def build_governance_checks() -> list[GovernanceCheck]:
             reason="Adoption classification and deferrals must be documented in a repo-local proof note.",
         ),
         GovernanceCheck(
+            name="implementation-note-v2",
+            path="docs/architecture/BACKEND_ADOPTION_IMPLEMENTATION_NOTE_V2.md",
+            reason="Implementation-ready boundary planning belongs in the v2 note before any runtime or contract expansion.",
+        ),
+        GovernanceCheck(
             name="verification-sql-home",
             path="supabase/verification/README.md",
             reason="Schema and RLS proof belongs in the verification SQL surface, not in ad hoc handler logic.",
