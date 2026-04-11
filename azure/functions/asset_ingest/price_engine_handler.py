@@ -6,7 +6,8 @@ from typing import Callable
 
 import azure.functions as func
 
-from price_engine_service import PriceEngineError, calculate_price_engine
+from adoption import PricingRequestContext, PricingScenario, resolve_pricing_gateway
+from price_engine_service import PriceEngineError
 
 
 def handle_price_engine_calculate(
@@ -22,7 +23,26 @@ def handle_price_engine_calculate(
         return _error_response("VALIDATION_FAILED", "Request body must be an object", 400, build_headers)
 
     try:
-        result = calculate_price_engine(payload)
+        selection = resolve_pricing_gateway()
+        scenario_id = str(payload.get("scenarioId") or payload.get("scenario_id") or "request")
+        context = PricingRequestContext(
+            correlation_id=req.headers.get("x-correlation-id", "price-engine-request"),
+            organization_id=req.headers.get("x-organization-id"),
+            actor_id=req.headers.get("x-actor-id"),
+            trace_headers={
+                key: value
+                for key, value in req.headers.items()
+                if key.lower().startswith("x-")
+            },
+        )
+        result = selection.gateway.calculate(
+            PricingScenario(
+                scenario_id=scenario_id,
+                inputs=payload,
+                engine_version=selection.mode,
+            ),
+            context=context,
+        )
         return func.HttpResponse(
             json.dumps(result),
             status_code=200,
@@ -32,6 +52,8 @@ def handle_price_engine_calculate(
     except PriceEngineError as exc:
         status_code = 400 if exc.code != "INTERNAL_ERROR" else 500
         return _error_response(exc.code, exc.message, status_code, build_headers, exc.details)
+    except ValueError as exc:
+        return _error_response("VALIDATION_FAILED", str(exc), 400, build_headers)
     except Exception:
         logging.exception("Price engine calculation failed")
         return _error_response("INTERNAL_ERROR", "Internal server error", 500, build_headers)
