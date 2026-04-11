@@ -14,8 +14,10 @@ from adoption import (  # noqa: E402
     create_outbox_message,
 )
 from adoption.pricing_boundary import (  # noqa: E402
+    LocalPriceEngineGateway,
     PricingRequestContext,
     PricingScenario,
+    resolve_pricing_gateway,
     RangeKeeperGatewayDeferred,
 )
 
@@ -62,8 +64,9 @@ class AdoptionScaffoldTests(unittest.TestCase):
     def test_governance_checks_reference_repo_authorities(self) -> None:
         checks = build_governance_checks()
 
-        self.assertGreaterEqual(len(checks), 4)
+        self.assertGreaterEqual(len(checks), 5)
         self.assertTrue(any(check.path == "docs/architecture/ROUTE_MAP_V1.md" for check in checks))
+        self.assertTrue(any(check.path == "docs/architecture/BACKEND_ADOPTION_IMPLEMENTATION_NOTE_V2.md" for check in checks))
         self.assertTrue(any(check.path == "supabase/verification/README.md" for check in checks))
 
     def test_deferred_rangekeeper_gateway_is_non_executable(self) -> None:
@@ -72,6 +75,22 @@ class AdoptionScaffoldTests(unittest.TestCase):
                 PricingScenario(scenario_id="baseline", inputs={}),
                 context=PricingRequestContext(correlation_id="test-correlation"),
             )
+
+    def test_gateway_selection_defaults_to_local_adapter(self) -> None:
+        selection = resolve_pricing_gateway(env={})
+
+        self.assertEqual(selection.mode, "local")
+        self.assertIsInstance(selection.gateway, LocalPriceEngineGateway)
+
+    def test_gateway_selection_can_explicitly_choose_wrapped_service_mode(self) -> None:
+        selection = resolve_pricing_gateway(env={"ALTUS_PRICING_GATEWAY": "rangekeeper"})
+
+        self.assertEqual(selection.mode, "rangekeeper")
+        self.assertIsInstance(selection.gateway, RangeKeeperGatewayDeferred)
+
+    def test_gateway_selection_rejects_unknown_modes(self) -> None:
+        with self.assertRaises(ValueError):
+            resolve_pricing_gateway(env={"ALTUS_PRICING_GATEWAY": "mystery"})
 
 
 if __name__ == "__main__":
