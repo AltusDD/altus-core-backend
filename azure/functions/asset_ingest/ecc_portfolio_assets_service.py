@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 class PortfolioAssetsBackingRow:
     asset_id: str
     display_name: str | None = None
+    asset_type: str | None = None
     status: str | None = None
     total_units: int | None = None
 
@@ -55,6 +56,7 @@ class _AssetsExternalIdsPortfolioAssetsSource:
             PortfolioAssetsBackingRow(
                 asset_id=str(row['id']),
                 display_name=_as_optional_string(row.get('display_name')),
+                asset_type=_as_optional_string(row.get('asset_type')),
                 status=_as_optional_string(row.get('status')),
                 total_units=units_by_asset_id.get(str(row['id'])),
             )
@@ -71,7 +73,7 @@ class _AssetsExternalIdsPortfolioAssetsSource:
             'Prefer': 'count=exact',
         }
         params = {
-            'select': 'id,display_name,status',
+            'select': 'id,display_name,asset_type,status',
             f'external_ids->>{self._external_ids_key}': f'eq.{portfolio_id}',
             'order': 'id.asc',
             'limit': str(limit),
@@ -169,6 +171,8 @@ def build_portfolio_assets(portfolio_id: str, limit: int, offset: int) -> dict[s
         row['assetId'] = backing_row.asset_id
         if backing_row.display_name is not None:
             row['displayName'] = backing_row.display_name
+        if backing_row.asset_type is not None:
+            row['assetType'] = backing_row.asset_type
         if backing_row.status is not None:
             row['status'] = backing_row.status
         if backing_row.total_units is not None:
