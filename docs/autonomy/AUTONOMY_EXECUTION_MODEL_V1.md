@@ -121,3 +121,15 @@ This repo may also use:
 - `.github/workflows/create_autonomy_test_issue.yml` to generate the first backend validation issue
 
 These workflows are supporting infrastructure only. They do not replace issue review, proof artifacts, or merge judgment.
+
+## Autonomy Validation Run
+
+This section records the repository-local proof of a single end-to-end autonomy validation for the backend execution model.
+
+- Run: AUTONOMY-TEST-01 (Issue #29)
+- Date: March 13, 2026 (UTC)
+- Chain observed: Issue -> task_router -> codex_worker -> branch/PR -> proof_gate
+- Repo delta: documentation-only update to this file; no workflow, deploy target, or secret changes.
+- Proof artifacts (expected via proof_gate): changed_files.txt, diff_summary.txt, proof_status.json, proof_summary.md.
+
+Notes: This lightweight, additive change is intentional to exercise the router -> worker -> PR -> proof chain without touching runtime or contracts.
